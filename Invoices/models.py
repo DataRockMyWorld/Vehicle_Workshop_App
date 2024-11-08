@@ -1,7 +1,8 @@
+# Invoices/models.py
+
 from django.db import models
 from ServiceRequests.models import ServiceRequest
 
-# Create your models here.
 class Invoice(models.Model):
     service_request = models.ForeignKey(ServiceRequest, on_delete=models.CASCADE)
     total_cost = models.DecimalField(max_digits=10, decimal_places=2)

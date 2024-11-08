@@ -1,8 +1,8 @@
 from django.shortcuts import render
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from .models import Customer
 from .serializers import CustomerSerializer
-from rest_framework import generics, permissio
+from rest_framework import generics
 
 class CustomerListCreateView(generics.ListCreateAPIView):
     queryset = Customer.objects.all()

@@ -1,6 +1,7 @@
 from django.apps import AppConfig
 
+class ServiceRequestsConfig(AppConfig):
+    name = 'ServiceRequests'
 
-class ServicerequestsConfig(AppConfig):
-    default_auto_field = "django.db.models.BigAutoField"
-    name = "ServiceRequests"
+    def ready(self):
+        import ServiceRequests.signals  # Import signals when the app is ready

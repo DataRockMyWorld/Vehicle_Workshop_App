@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import ServiceRequest
+from .models import ServiceRequest, ProductUsage
 
 @admin.register(ServiceRequest)
 class ServiceRequestAdmin(admin.ModelAdmin):
@@ -9,3 +9,6 @@ class ServiceRequestAdmin(admin.ModelAdmin):
 
 
 # Register your models here.
+@admin.register(ProductUsage)
+class ProductUsageAdmin(admin.ModelAdmin):
+    list_display = ('product', 'service_request', 'quantity_used')
