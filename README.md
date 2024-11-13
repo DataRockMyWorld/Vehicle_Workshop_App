@@ -123,8 +123,8 @@ TWILIO_PHONE_NUMBER=your_twilio_phone_number
    - In separate terminals, run the following:
 
    ```bash
-   celery -A workshop_management worker -l info
-   celery -A workshop_management beat -l info
+   celery -A core worker -l info
+   celery -A core beat -l info
    ```
 
 ---
