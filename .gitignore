@@ -4,3 +4,6 @@
 .venv
 /.venv/
 /.env/
+db.sqlite3
+__pychache__/
+.DS_Store

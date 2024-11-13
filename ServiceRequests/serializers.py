@@ -16,3 +16,4 @@ class ProductUsageSerializer(serializers.ModelSerializer):
         if value <= 0:
             raise serializers.ValidationError("Quantity used must be a positive integer.")
         return value
+    

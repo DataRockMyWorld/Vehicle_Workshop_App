@@ -7,6 +7,7 @@ from django.conf import settings
 from .models import ServiceRequest, ProductUsage
 from Invoices.models import Invoice
 
+
 @shared_task
 def send_service_reminder():
     """
@@ -135,3 +136,10 @@ def generate_invoice(service_request_id):
         total_cost=total_cost,
     )
     return invoice
+
+from celery import shared_task
+
+@shared_task
+def test_task():
+    print("Test task executed successfully.")
+    return "Task completed"

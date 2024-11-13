@@ -16,6 +16,7 @@ class ServiceRequest(models.Model):
     status = models.CharField(max_length=20, choices=[('Pending', 'Pending'), ('In Progress', 'In Progress'), ('Completed', 'Completed')])
     product_used = models.ManyToManyField(Product, through='ProductUsage')
 
+
     def __str__(self):
         return f"Service Request for {self.vehicle} - {self.status}"
 

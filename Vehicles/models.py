@@ -9,6 +9,7 @@ class Vehicle(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
     license_plate = models.CharField(max_length=50)
     site = models.ForeignKey(Site, on_delete=models.CASCADE, related_name="vehicles")
+    last_serviced = models.DateField(null=True, blank=True)
     
     def __str__(self):
         return f"{self.model} {self.make} {self.license_plate}"
