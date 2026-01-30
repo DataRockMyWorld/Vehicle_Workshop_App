@@ -1,27 +1,34 @@
 from celery import shared_task
-from twilio.rest import Client
-from django.conf import settings
-from .models import Invoice
 
+from core.messaging import send_email, send_sms
+from .models import Invoice
 
 
 @shared_task
 def notify_customer_of_invoice(invoice_id):
     """
-    Notifies the customer of the generated invoice via SMS or WhatsApp.
+    Notify the customer of the generated invoice via SMS and email.
+    SMS: console in dev, Twilio when USE_TWILIO_SMS=True.
+    Email: logged to terminal for now.
     """
-    invoice = Invoice.objects.get(id=invoice_id)
-    service_request = invoice.service_request
-    customer = service_request.customer
-
+    invoice = Invoice.objects.select_related(
+        "service_request", "service_request__customer", "service_request__vehicle"
+    ).get(id=invoice_id)
+    customer = invoice.service_request.customer
+    vehicle = invoice.service_request.vehicle
     message = (
         f"Dear {customer.first_name}, your service is complete. "
-        f"The total cost is ${invoice.total_cost}. Please proceed to payment."
+        f"The total cost is GH₵{invoice.total_cost}. Please proceed to payment."
     )
-
-    client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
-    client.messages.create(
-        body=message,
-        from_=settings.TWILIO_PHONE_NUMBER,
-        to=customer.phone_number
-    )
+    send_sms(customer.phone_number, message, context="invoice")
+    email = (customer.email or "").strip()
+    if email:
+        subject = f"Invoice #{invoice.id} - {vehicle.make} {vehicle.model}"
+        body = (
+            f"Dear {customer.first_name},\n\n"
+            f"Your service for {vehicle.make} {vehicle.model} ({vehicle.license_plate}) is complete.\n"
+            f"Total amount: GH₵{invoice.total_cost}\n\n"
+            f"Please proceed to payment at your earliest convenience.\n\n"
+            f"Thank you."
+        )
+        send_email(email, subject, body, context="invoice")

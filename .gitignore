@@ -4,6 +4,15 @@
 .venv
 /.venv/
 /.env/
+!.env.example
 db.sqlite3
-__pychache__/
+__pycache__/
+*.pyc
 .DS_Store
+*.sqlite3
+dump.rdb
+staticfiles
+
+# Frontend
+frontend/node_modules
+frontend/dist

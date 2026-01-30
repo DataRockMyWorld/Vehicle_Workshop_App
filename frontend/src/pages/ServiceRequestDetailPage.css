@@ -1,0 +1,214 @@
+/* Layout */
+.sr-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.sr-detail__back {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.sr-detail__id {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.sr-detail__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.sr-detail__error {
+  padding: 0.75rem 1rem;
+  background: var(--error-muted);
+  color: var(--error);
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+}
+
+/* Grid: Details + Assign mechanic top row, then Parts, then Invoice */
+.sr-detail__grid {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.sr-detail__grid > .sr-detail__card:first-child {
+  grid-column: 1;
+}
+
+.sr-detail__grid > .sr-detail__card:nth-child(2) {
+  grid-column: 2;
+}
+
+.sr-detail__card--wide {
+  grid-column: 1 / -1;
+}
+
+/* Cards: proportional, balanced, polished */
+.sr-detail__card {
+  padding: 1.5rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+}
+
+.sr-detail__card:first-child,
+.sr-detail__card:nth-child(2) {
+  min-height: 260px;
+}
+
+.sr-detail__card--wide {
+  min-height: auto;
+}
+
+.sr-detail__card-title {
+  margin: 0 0 1.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Details card: definition list */
+.sr-detail__dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 130px 1fr;
+  gap: 0.6rem 1.5rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.sr-detail__dl dt {
+  color: var(--text-muted);
+  font-weight: 500;
+  font-size: 0.85rem;
+}
+
+.sr-detail__dl dd {
+  margin: 0;
+  color: var(--text);
+}
+
+.sr-detail__description {
+  margin: 1.25rem 0 0;
+  padding: 1rem 0 0;
+  border-top: 1px solid var(--border);
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  flex: 1;
+}
+
+.sr-detail__labor-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.sr-detail__labor-edit .input {
+  width: 100px;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.9rem;
+}
+
+/* Assign mechanic card: centered, balanced */
+.sr-detail__assign {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  flex: 1;
+  justify-content: flex-start;
+}
+
+.sr-detail__assign .select {
+  width: 100%;
+  min-width: 0;
+  padding: 0.6rem 0.75rem;
+}
+
+.sr-detail__assign .btn {
+  width: 100%;
+  align-self: stretch;
+}
+
+.sr-detail__mechanic-card .sr-detail__muted {
+  padding: 0.5rem 0;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text);
+}
+
+/* Parts used */
+.sr-detail__add-part {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.sr-detail__add-part .select {
+  flex: 1;
+  min-width: 200px;
+}
+
+.sr-detail__add-part .input {
+  width: 80px;
+}
+
+.sr-detail__sku {
+  font-size: 0.85em;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.sr-detail__muted {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.sr-detail__card--wide .sr-detail__muted {
+  padding: 1rem 0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .sr-detail__grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .sr-detail__grid > .sr-detail__card:nth-child(2) {
+    grid-column: 1;
+  }
+
+  .sr-detail__card:first-child,
+  .sr-detail__card:nth-child(2) {
+    min-height: auto;
+  }
+
+  .sr-detail__dl {
+    grid-template-columns: 110px 1fr;
+    gap: 0.5rem 1rem;
+  }
+
+}

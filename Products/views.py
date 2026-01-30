@@ -1,7 +1,7 @@
 from .models import Product
 from rest_framework import generics
 from .serializers import ProductSerializer
-from accounts.permissions import IsSuperUserOrReadOnly, IsSuperUserOrSiteAdmin
+from accounts.permissions import IsSuperUserOrReadOnly
 
 class ProductListCreateView(generics.ListCreateAPIView):
     queryset = Product.objects.all()

@@ -4,14 +4,6 @@ from .models import Customer
 
 @admin.register(Customer)
 class CustomerAdmin(admin.ModelAdmin):
-    list_display = (
-        "first_name",
-        "last_name",
-        "email",
-        "phone_number",
-    )
-    
-    search_fields = ("name", "email", "phone")
-
-
-# Register your models here.
+    list_display = ("first_name", "last_name", "email", "phone_number", "receive_service_reminders")
+    search_fields = ("first_name", "last_name", "email", "phone_number")
+    ordering = ("last_name", "first_name")

@@ -12,6 +12,8 @@ A Django-based management application for vehicle workshops. This app helps work
   - [Installation](#installation)
   - [Environment Variables](#environment-variables)
   - [Running the Application](#running-the-application)
+- [Docker](#docker)
+- [Frontend](#frontend)
 - [Celery and Redis](#celery-and-redis)
 - [API Endpoints](#api-endpoints)
   - [Authentication](#authentication)
@@ -51,7 +53,7 @@ A Django-based management application for vehicle workshops. This app helps work
 
 - Python 3.8+
 - Redis server (for Celery)
-- Twilio account for SMS/WhatsApp notifications
+- Twilio account for SMS (optional). By default, notifications are logged to the console so you can confirm flows in development; set `USE_TWILIO_SMS=True` and Twilio credentials to send real SMS.
 
 ### Installation
 
@@ -74,28 +76,13 @@ A Django-based management application for vehicle workshops. This app helps work
 
 ### Environment Variables
 
-Create a `.env` file in the root directory to store sensitive configuration data. The following variables should be set:
+Copy `.env.example` to `.env` and adjust values:
 
+```bash
+cp .env.example .env
 ```
-SECRET_KEY=your_django_secret_key
-DEBUG=True
-ALLOWED_HOSTS=localhost,127.0.0.1
 
-DATABASE_URL=postgres://user:password@localhost:5432/vehicle_workshop
-
-# Redis configuration for Celery
-CELERY_BROKER_URL=redis://localhost:6379/0
-CELERY_RESULT_BACKEND=redis://localhost:6379/0
-
-# JWT settings
-SIMPLE_JWT_ACCESS_TOKEN_LIFETIME=30m
-SIMPLE_JWT_REFRESH_TOKEN_LIFETIME=7d
-
-# Twilio credentials for notifications
-TWILIO_ACCOUNT_SID=your_twilio_account_sid
-TWILIO_AUTH_TOKEN=your_twilio_auth_token
-TWILIO_PHONE_NUMBER=your_twilio_phone_number
-```
+See `.env.example` for all supported variables. Required: `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS`. For Docker, Postgres and Redis URLs are set by Compose.
 
 ### Running the Application
 
@@ -126,6 +113,62 @@ TWILIO_PHONE_NUMBER=your_twilio_phone_number
    celery -A core worker -l info
    celery -A core beat -l info
    ```
+
+---
+
+## Docker
+
+Run the full stack (Django, Celery worker, Celery beat, Redis, PostgreSQL) with Docker Compose:
+
+1. **Create `.env`** from the example and set at least `SECRET_KEY` and `POSTGRES_PASSWORD`:
+
+   ```bash
+   cp .env.example .env
+   # Edit .env: SECRET_KEY=..., POSTGRES_PASSWORD=...
+   ```
+
+2. **Build and start**:
+
+   ```bash
+   docker compose up -d --build
+   ```
+
+3. **Create a superuser** (one-off):
+
+   ```bash
+   docker compose exec web python manage.py createsuperuser
+   ```
+
+4. **Open the app**: API at [http://localhost:8000](http://localhost:8000), admin at [http://localhost:8000/admin/](http://localhost:8000/admin/), health at [http://localhost:8000/health/](http://localhost:8000/health/).
+
+Override the web port with `WEB_PORT`, e.g. `WEB_PORT=9000 docker compose up -d`.
+
+**Note:** Create `.env` from `.env.example` before running `docker compose`; the Compose file references `env_file: .env`.
+
+---
+
+## Frontend
+
+A React + Vite app in the `frontend/` folder provides a login page and dashboard that use the JWT API.
+
+1. **Install and run** (backend must be running, e.g. Docker on port 8000):
+   ```bash
+   cd frontend && npm install && npm run dev
+   ```
+2. Open [http://localhost:5173](http://localhost:5173). Sign in at `/login` with a user created via `createsuperuser` (use **email** as the username).
+3. See `frontend/README.md` for details, test credentials, and build instructions.
+
+---
+
+## Docker & robustness improvements
+
+- **Multi-stage Dockerfile**: Builder and runtime stages for smaller images; non-root user.
+- **PostgreSQL + Redis**: DB and broker in containers with healthchecks; migration and static collection in entrypoint.
+- **Env-driven config**: `DATABASE_URL`, `CELERY_*`, `ALLOWED_HOSTS`, optional Twilio; SQLite fallback when `DATABASE_URL` is unset.
+- **Health endpoint**: `GET /health/` for load balancers and container healthchecks.
+- **Celery Beat schedule**: Promotional notifications (09:00 UTC) and service reminders (10:00 UTC) via `beat_schedule`.
+- **JWT blacklist**: `token_blacklist` app enabled for refresh rotation.
+- **Gunicorn**: `--worker-tmp-dir /dev/shm`; explicit workers and logging.
 
 ---
 

@@ -1,0 +1,26 @@
+.service-requests__bar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.service-requests__filter {
+  display: flex;
+  align-items: center;
+}
+
+.sr-link {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.sr-link:hover {
+  text-decoration: underline;
+}
+
+.service-requests .table tbody tr[data-clickable]:focus {
+  outline: none;
+  background: var(--accent-muted);
+}

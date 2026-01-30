@@ -1,0 +1,139 @@
+/* Generic list page – orderly spacing for appointments, customers, etc. */
+.generic-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.generic-list .page-header {
+  margin-bottom: 0;
+}
+
+.generic-list .page-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+}
+
+.generic-list__error {
+  padding: 0.75rem 1rem;
+  background: var(--error-muted);
+  color: var(--error);
+  border-radius: var(--radius-sm);
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.generic-list__form {
+  padding: 1.5rem;
+  margin: 0;
+}
+
+.generic-list__form-title {
+  margin: 0 0 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.generic-list__form-error {
+  padding: 0.6rem 0.75rem;
+  margin: 0 0 1rem;
+  background: var(--error-muted);
+  color: var(--error);
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+}
+
+.generic-list__form .form-row {
+  margin-bottom: 1rem;
+}
+
+.generic-list__form .form-group {
+  margin-bottom: 0;
+}
+
+.generic-list__form .form-row + .form-group,
+.generic-list__form .form-group + .form-group {
+  margin-top: 1rem;
+}
+
+.generic-list__form > .form-group:last-child {
+  margin-bottom: 1rem;
+}
+
+.generic-list__form .label {
+  margin-bottom: 0.35rem;
+}
+
+.generic-list__form > .btn {
+  margin-top: 0.5rem;
+}
+
+.generic-list .card.table-wrap {
+  padding: 0;
+  margin: 0;
+}
+
+.generic-list .table th,
+.generic-list .table td {
+  padding: 0.75rem 1rem;
+}
+
+.generic-list .table thead th {
+  padding: 0.75rem 1rem;
+}
+
+.generic-list .empty {
+  padding: 2rem 1.5rem;
+  margin: 0;
+}
+
+/* Form card (used by Vehicles, Customers, Products, Inventory, Sites, Mechanics) */
+.form-card {
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.form-card__title {
+  margin: 0 0 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.form-card__error {
+  padding: 0.6rem 0.75rem;
+  background: var(--error-muted);
+  color: var(--error);
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.form-card__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.form-card__actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.form-card__actions .btn--primary {
+  margin-left: auto;
+}
+
+.form-group--full {
+  grid-column: 1 / -1;
+}
+
+.form-group--check {
+  display: flex;
+  align-items: center;
+}

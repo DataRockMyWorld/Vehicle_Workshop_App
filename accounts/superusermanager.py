@@ -4,9 +4,11 @@ class CustomUserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
         """
         Create and return a regular user with an email and password.
+        New users are active by default so they can log in immediately.
         """
+        extra_fields.setdefault("is_active", True)
         if not email:
-            raise ValueError('The Email field must be set')
+            raise ValueError("The Email field must be set")
         email = self.normalize_email(email)
         user = self.model(email=email, **extra_fields)
         user.set_password(password)

@@ -1,0 +1,137 @@
+.dashboard__stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.stat {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.stat__value {
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.stat__label {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.stat--success .stat__value {
+  color: var(--success, #22c55e);
+}
+
+.stat--warning .stat__value {
+  color: var(--warning, #f59e0b);
+}
+
+.dashboard__chart {
+  margin-bottom: 1.5rem;
+}
+
+.dashboard__alerts {
+  margin-bottom: 1.5rem;
+}
+
+.dashboard__alerts-card {
+  padding: 1rem 1.25rem;
+  border-left: 4px solid var(--error, #dc2626);
+}
+
+.dashboard__alerts-link {
+  display: block;
+  font-weight: 600;
+  color: var(--accent);
+  text-decoration: none;
+  margin-bottom: 0.5rem;
+}
+
+.dashboard__alerts-link:hover {
+  text-decoration: underline;
+}
+
+.dashboard__alerts-list {
+  margin: 0;
+  padding-left: 1.25rem;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.dashboard__alerts-list li {
+  margin-bottom: 0.25rem;
+}
+
+.dashboard__quick-actions {
+  margin-bottom: 1.5rem;
+}
+
+.dashboard__actions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 1rem;
+}
+
+.dashboard__action-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1.25rem 1rem;
+  text-decoration: none;
+  color: var(--text);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.dashboard__action-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 2px 8px var(--accent-muted);
+}
+
+.dashboard__action-icon {
+  font-size: 1.5rem;
+}
+
+.dashboard__action-label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-align: center;
+}
+
+.dashboard__recent {
+  margin-top: 0.5rem;
+}
+
+.dashboard__section-title {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.dashboard__id {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.dashboard__id:hover {
+  text-decoration: underline;
+}
+
+.dashboard .table tbody tr[data-clickable]:focus {
+  outline: none;
+  background: var(--accent-muted);
+}
+
+.dashboard .table tbody tr[data-clickable] td {
+  pointer-events: auto;
+}

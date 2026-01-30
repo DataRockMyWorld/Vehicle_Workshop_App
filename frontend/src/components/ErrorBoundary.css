@@ -1,0 +1,39 @@
+.error-boundary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 280px;
+  padding: 2rem;
+  text-align: center;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin: 1rem 0;
+}
+
+.error-boundary__icon {
+  width: 48px;
+  height: 48px;
+  color: var(--error);
+  margin-bottom: 1rem;
+}
+
+.error-boundary__icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.error-boundary__title {
+  margin: 0 0 0.5rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.error-boundary__message {
+  margin: 0 0 1.25rem;
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  max-width: 320px;
+}

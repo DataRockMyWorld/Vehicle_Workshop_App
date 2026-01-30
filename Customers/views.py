@@ -1,17 +1,18 @@
-from django.shortcuts import render
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework import generics
+from rest_framework.permissions import IsAuthenticated
+
+from accounts.permissions import IsReadOnlyForHQ
 from .models import Customer
 from .serializers import CustomerSerializer
-from rest_framework import generics
+
 
 class CustomerListCreateView(generics.ListCreateAPIView):
     queryset = Customer.objects.all()
     serializer_class = CustomerSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsReadOnlyForHQ]
+
 
 class CustomerDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Customer.objects.all()
     serializer_class = CustomerSerializer
-    permission_classes = [IsAuthenticated]
-
-# Create your views here.
+    permission_classes = [IsAuthenticated, IsReadOnlyForHQ]

@@ -1,0 +1,55 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv
+venv
+.env
+.env.*
+!.env.example
+
+# IDE / OS
+.idea
+.vscode
+*.swp
+.DS_Store
+
+# Testing / coverage
+.pytest_cache
+.coverage
+htmlcov
+.tox
+*.cover
+
+# Build / distribution
+*.egg-info
+dist
+build
+
+# Local DB (use Postgres in Docker)
+db.sqlite3
+*.sqlite3
+dump.rdb
+celerybeat-schedule
+celerybeat-schedule.db
+celerybeat-schedule.dat
+celerybeat-schedule.bak
+
+# Static collected locally (rebuilt in image)
+staticfiles
+
+# Docker
+Dockerfile*
+docker-compose*
+.docker
+
+# Docs (optional: remove if you want them in image)
+# README.md
+# schema.yml

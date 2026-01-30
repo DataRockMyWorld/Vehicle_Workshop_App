@@ -1,0 +1,19 @@
+.inventory-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.inventory-filters__item {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.9rem;
+}
+
+.inventory-page__sku {
+  font-size: 0.85em;
+  color: var(--text-muted);
+  font-weight: 400;
+}
