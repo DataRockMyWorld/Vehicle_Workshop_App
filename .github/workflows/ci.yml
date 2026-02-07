@@ -30,6 +30,9 @@ jobs:
 
       - name: Run tests
         run: python manage.py test
+        env:
+          SECRET_KEY: ci-secret-key-for-testing-only
+          DEBUG: "false"
 
   frontend:
     name: Frontend tests
