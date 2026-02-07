@@ -1,0 +1,111 @@
+.product-search {
+  position: relative;
+  flex: 1;
+  min-width: 200px;
+}
+
+.product-search__input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.product-search__input {
+  width: 100%;
+  padding-right: 2rem;
+}
+
+.product-search__clear {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  border: none;
+  background: var(--text-muted);
+  color: white;
+  border-radius: 50%;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.7;
+}
+
+.product-search__clear:hover {
+  opacity: 1;
+}
+
+.product-search__loading,
+.product-search__empty {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+}
+
+.product-search__list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  max-height: 280px;
+  overflow-y: auto;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.product-search__item {
+  padding: 0.6rem 0.85rem;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.1s;
+}
+
+.product-search__item:last-child {
+  border-bottom: none;
+}
+
+.product-search__item:hover:not(.product-search__item--disabled),
+.product-search__item--highlight:not(.product-search__item--disabled) {
+  background: var(--accent-muted);
+}
+
+.product-search__item--disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.product-search__item-name {
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+.product-search__item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.product-search__stock--low {
+  color: var(--error);
+}

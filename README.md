@@ -220,6 +220,26 @@ This app uses Celery for handling background tasks like sending notifications an
 
 ## Testing
 
+### Automated CI (GitHub Actions)
+
+On push/PR to `master` or `main`, the CI workflow runs:
+
+- **Backend**: Django unit tests (`python manage.py test`)
+- **Frontend**: Vitest unit tests (`npm run test:run`) and build
+- **E2E**: Playwright tests (login, dashboard, service requests)
+
+See `.github/workflows/ci.yml` for the full pipeline. Uses SQLite for tests (no Postgres/Redis in CI).
+
+### Local testing
+
+**Backend (Docker):** `docker compose exec web python manage.py test`
+
+**Frontend:** `cd frontend && npm run test:run`
+
+**E2E:** See [frontend/README.md](frontend/README.md#e2e-setup).
+
+### Manual API testing
+
 - Use **Postman** to test endpoints for creating and completing service requests, managing product usage, and generating invoices.
 - **Celery Testing**: To verify Celery tasks, check Redis queues and confirm delivery of notifications through Twilio logs.
 

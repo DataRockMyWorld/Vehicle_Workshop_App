@@ -17,7 +17,29 @@ class ServiceRequestListCreateView(generics.ListCreateAPIView):
     queryset = ServiceRequest.objects.select_related("customer", "vehicle", "site", "assigned_mechanic", "service_type", "service_type__category").all()
 
     def get_queryset(self):
-        return filter_queryset_by_site(super().get_queryset(), self.request.user)
+        qs = filter_queryset_by_site(super().get_queryset(), self.request.user)
+        customer_id = self.request.query_params.get("customer_id")
+        vehicle_id = self.request.query_params.get("vehicle_id")
+        mechanic_id = self.request.query_params.get("mechanic_id")
+        parts_only = self.request.query_params.get("parts_only", "").lower() in ("1", "true", "yes")
+        if parts_only:
+            qs = qs.filter(vehicle__isnull=True)
+        if customer_id:
+            try:
+                qs = qs.filter(customer_id=int(customer_id))
+            except (ValueError, TypeError):
+                pass
+        if vehicle_id and not parts_only:
+            try:
+                qs = qs.filter(vehicle_id=int(vehicle_id))
+            except (ValueError, TypeError):
+                pass
+        if mechanic_id:
+            try:
+                qs = qs.filter(assigned_mechanic_id=int(mechanic_id))
+            except (ValueError, TypeError):
+                pass
+        return qs.order_by("-created_at")
 
     def perform_create(self, serializer):
         user = self.request.user
@@ -127,6 +149,49 @@ class ProductUsageListView(generics.ListAPIView):
         if user.is_superuser or getattr(user, "site", None) is None:
             return qs
         return qs.filter(service_request__site_id=user.site_id)
+
+
+def _product_usage_queryset(user):
+    qs = ProductUsage.objects.select_related("service_request", "product")
+    if user.is_superuser or getattr(user, "site", None) is None:
+        return qs
+    return qs.filter(service_request__site_id=user.site_id)
+
+
+class ProductUsageDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    Retrieve, update, or delete a product usage entry.
+    Edit/delete only allowed when service request is not Completed.
+    """
+    serializer_class = ProductUsageSerializer
+    permission_classes = [IsAuthenticated, IsReadOnlyForHQ]
+
+    def get_queryset(self):
+        return _product_usage_queryset(self.request.user)
+
+    def perform_update(self, serializer):
+        sr = serializer.instance.service_request
+        if sr.status == "Completed":
+            raise ValidationError("Cannot edit parts on a completed service request.")
+        user = self.request.user
+        if not user.is_superuser:
+            site = getattr(user, "site", None)
+            if site and sr.site_id != site.id:
+                from rest_framework.exceptions import PermissionDenied
+                raise PermissionDenied("You can only edit parts on service requests at your site.")
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        sr = instance.service_request
+        if sr.status == "Completed":
+            raise ValidationError("Cannot remove parts from a completed service request.")
+        user = self.request.user
+        if not user.is_superuser:
+            site = getattr(user, "site", None)
+            if site and sr.site_id != site.id:
+                from rest_framework.exceptions import PermissionDenied
+                raise PermissionDenied("You can only remove parts from service requests at your site.")
+        instance.delete()
 
 
 class ServiceCategoriesView(APIView):

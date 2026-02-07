@@ -5,9 +5,9 @@
   --border: #dee1e6;
   --text: #1a1d24;
   --text-muted: #5c6370;
-  --accent: #0d9488;
-  --accent-hover: #0faaa0;
-  --accent-muted: rgba(13, 148, 136, 0.12);
+  --accent: #ff6b35;
+  --accent-hover: #ff8555;
+  --accent-muted: rgba(255, 107, 53, 0.12);
   --error: #dc2626;
   --error-muted: rgba(220, 38, 38, 0.1);
   --hover-bg: rgba(0, 0, 0, 0.04);
@@ -91,6 +91,11 @@ input::placeholder {
   transform: scale(0.98);
 }
 
+.btn--sm {
+  padding: 0.4rem 0.75rem;
+  font-size: 0.85rem;
+}
+
 .btn--secondary {
   background: var(--bg-surface);
   color: var(--text);
@@ -109,6 +114,15 @@ input::placeholder {
 .btn--ghost:hover:not(:disabled) {
   color: var(--text);
   background: var(--hover-bg);
+}
+
+.history-link {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.history-link:hover {
+  text-decoration: underline;
 }
 
 .page-header {
@@ -191,7 +205,7 @@ input::placeholder {
 .badge--completed { background: rgba(80, 180, 120, 0.2); color: #50b478; }
 .badge--danger { background: rgba(220, 80, 80, 0.2); color: #dc5050; }
 .badge--create { background: rgba(80, 180, 120, 0.2); color: #50b478; }
-.badge--update { background: rgba(34, 162, 185, 0.2); color: var(--accent); }
+.badge--update { background: rgba(255, 107, 53, 0.15); color: var(--accent); }
 .badge--delete { background: rgba(220, 80, 80, 0.2); color: #dc5050; }
 .badge--scheduled, .badge--confirmed { background: rgba(139, 146, 160, 0.2); color: var(--text-muted); }
 .badge--in-progress { background: rgba(34, 162, 185, 0.2); color: var(--accent); }
@@ -245,6 +259,20 @@ textarea.input {
 .form-row .form-group {
   flex: 1;
   min-width: 120px;
+}
+
+.form-readonly {
+  padding: 0.5rem 0.75rem;
+  background: var(--bg-base);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+/* Allow dropdowns (ProductSearch etc.) to extend outside form cards */
+.form-card.card {
+  overflow: visible;
 }
 
 .empty {

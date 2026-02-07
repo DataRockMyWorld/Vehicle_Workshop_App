@@ -22,10 +22,10 @@
 }
 
 .layout__logo {
-  width: 28px;
-  height: 28px;
-  background: linear-gradient(135deg, var(--accent) 0%, #0f766e 100%);
-  border-radius: 6px;
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  flex-shrink: 0;
 }
 
 .layout__name {
@@ -220,7 +220,7 @@
 .layout__main {
   flex: 1;
   overflow: auto;
-  padding: 1rem 1.25rem;
+  padding: 0.75rem 1.25rem;
   display: flex;
   flex-direction: column;
 }
@@ -231,6 +231,12 @@
   align-items: center;
   gap: 1rem;
   margin-bottom: 1rem;
+}
+
+@media (min-width: 901px) {
+  .layout__header {
+    display: none;
+  }
 }
 
 .layout__hamburger {

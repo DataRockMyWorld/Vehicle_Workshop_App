@@ -37,7 +37,13 @@ class ServiceType(models.Model):
 
 class ServiceRequest(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
-    vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE)
+    vehicle = models.ForeignKey(
+        Vehicle,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        help_text="Optional for walk-in parts sales (no vehicle work)",
+    )
     site = models.ForeignKey(Site, on_delete=models.CASCADE, related_name="service_requests")
     service_type = models.ForeignKey(
         "ServiceType",
@@ -58,7 +64,9 @@ class ServiceRequest(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"Service Request for {self.vehicle} - {self.status}"
+        if self.vehicle_id:
+            return f"Service Request for {self.vehicle} - {self.status}"
+        return f"Parts sale - {self.status}"
 
 class ProductUsage(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE)

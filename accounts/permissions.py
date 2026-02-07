@@ -58,6 +58,8 @@ class IsReadOnlyForHQ(permissions.BasePermission):
             return False
         if request.method in permissions.SAFE_METHODS:
             return True
-        # Write allowed only for site-scoped users (supervisors)
+        # Write allowed for site-scoped users (supervisors) or superuser
+        if request.user.is_superuser:
+            return True
         site = getattr(request.user, "site", None)
         return site is not None

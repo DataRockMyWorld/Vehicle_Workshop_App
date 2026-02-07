@@ -15,12 +15,13 @@ class CurrentUserView(APIView):
     def get(self, request):
         user = request.user
         site = getattr(user, "site", None)
-        can_write = site is not None  # Site supervisors can write; HQ/CEO read-only
+        can_write = site is not None or user.is_superuser  # Site supervisors + superuser can write
         return Response({
             "email": user.email,
             "can_write": can_write,
             "can_see_all_sites": getattr(user, "can_see_all_sites", user.is_superuser or site is None),
             "site_id": site.id if site else None,
+            "is_superuser": user.is_superuser,
         })
 
 

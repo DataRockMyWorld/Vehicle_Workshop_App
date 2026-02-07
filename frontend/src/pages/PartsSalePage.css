@@ -1,0 +1,20 @@
+.parts-sale__bar {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.parts-sale__filter {
+  display: flex;
+  align-items: center;
+}
+
+.parts-sale__link {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.parts-sale__link:hover {
+  text-decoration: underline;
+}

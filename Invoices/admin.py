@@ -4,8 +4,8 @@ from .models import Invoice
 
 @admin.register(Invoice)
 class InvoiceAdmin(admin.ModelAdmin):
-    list_display = ("id", "service_request", "total_cost", "paid", "created_at", "updated_at")
-    list_filter = ("paid", "created_at")
+    list_display = ("id", "service_request", "total_cost", "paid", "payment_method", "created_at", "updated_at")
+    list_filter = ("paid", "payment_method", "created_at")
     search_fields = (
         "service_request__id",
         "service_request__customer__first_name",

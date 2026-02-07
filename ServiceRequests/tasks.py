@@ -74,10 +74,15 @@ def notify_mechanic_assignment(service_request_id):
         return
     vehicle = service_request.vehicle
     customer = service_request.customer
+    vehicle_info = (
+        f"{vehicle.make} {vehicle.model} ({vehicle.license_plate})"
+        if vehicle
+        else "Parts sale (no vehicle)"
+    )
     message = (
         f"Hello {mechanic.name}, you have been assigned a new service request.\n"
         f"Customer: {customer.first_name} {customer.last_name}\n"
-        f"Vehicle: {vehicle.make} {vehicle.model} ({vehicle.license_plate})\n"
+        f"Vehicle: {vehicle_info}\n"
         f"Description: {service_request.description}"
     )
     send_sms(mechanic.phone_number, message, context="mechanic_assignment")
@@ -174,7 +179,7 @@ def generate_invoice(service_request_id):
 
 def _notify_customer_job_complete(service_request_id):
     """
-    Notify the vehicle owner that their car is ready for pickup via SMS and email.
+    Notify the customer that their job is complete - vehicle ready for pickup, or parts ready.
     """
     from core.messaging import send_email, send_sms
 
@@ -183,19 +188,24 @@ def _notify_customer_job_complete(service_request_id):
     )
     c = sr.customer
     v = sr.vehicle
-    msg = (
-        f"Hi {c.first_name}, your vehicle {v.make} {v.model} ({v.license_plate}) "
-        f"is ready for pickup. Thank you."
-    )
+    if v:
+        msg = (
+            f"Hi {c.first_name}, your vehicle {v.make} {v.model} ({v.license_plate}) "
+            f"is ready for pickup. Thank you."
+        )
+        subject = f"Your vehicle is ready - {v.make} {v.model}"
+        body = (
+            f"Hi {c.first_name},\n\n"
+            f"Your vehicle {v.make} {v.model} ({v.license_plate}) is ready for pickup.\n\nThank you."
+        )
+    else:
+        msg = f"Hi {c.first_name}, your parts order is ready for pickup. Thank you."
+        subject = "Your parts order is ready"
+        body = f"Hi {c.first_name},\n\nYour parts order is ready for pickup.\n\nThank you."
     send_sms(c.phone_number, msg, context="job_complete")
     email = (c.email or "").strip()
     if email:
-        send_email(
-            email,
-            f"Your vehicle is ready - {v.make} {v.model}",
-            f"Hi {c.first_name},\n\nYour vehicle {v.make} {v.model} ({v.license_plate}) is ready for pickup.\n\nThank you.",
-            context="job_complete",
-        )
+        send_email(email, subject, body, context="job_complete")
 
 
 def complete_service(service_request_id, promotion_id=None, discount_amount=None):
@@ -218,11 +228,12 @@ def complete_service(service_request_id, promotion_id=None, discount_amount=None
     service_request.status = "Completed"
     service_request.save(update_fields=["status"])
 
-    # Update vehicle last_serviced so reminders work correctly
+    # Update vehicle last_serviced so reminders work (only when vehicle exists)
     from django.utils import timezone
     vehicle = service_request.vehicle
-    vehicle.last_serviced = timezone.now().date()
-    vehicle.save(update_fields=["last_serviced"])
+    if vehicle:
+        vehicle.last_serviced = timezone.now().date()
+        vehicle.save(update_fields=["last_serviced"])
     _do_adjust_inventory(service_request_id)
     invoice = _do_generate_invoice(service_request_id, promotion_id=promotion_id, discount_amount=discount_amount)
     try:

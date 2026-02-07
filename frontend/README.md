@@ -45,6 +45,31 @@ Runs at [http://localhost:5173](http://localhost:5173). `/auth` and `/api` are p
 - **Service request detail:** View info, assign mechanic (dropdown + Save), add parts (product + qty → Add), **Mark complete** (adjusts inventory, creates invoice).
 - **Customers, Vehicles, Mechanics, Inventory, Invoices:** List-only tables (read-only for now).
 
+## Tests
+
+- **Unit / integration:** `npm test` (watch) or `npm run test:run`
+- **E2E (Playwright):** `npm run test:e2e` or `npm run test:e2e:ui`
+
+### E2E setup
+
+**With Docker**
+
+1. Backend running: `docker compose up` (port 8000)
+2. Create E2E test user: `docker compose exec web python manage.py create_e2e_user`
+
+**Without Docker (local backend)**
+
+1. From project root: activate venv, then `python manage.py migrate` and `python manage.py runserver` (port 8000)
+2. Create E2E test user: `python manage.py create_e2e_user`
+3. Redis: start `redis-server` if Celery is required; for basic E2E (login, list pages), the API runs without Celery
+
+**Run tests**
+
+1. Install Playwright browsers (one-off): `npx playwright install chromium`
+2. Run: `cd frontend && npm run test:e2e`
+
+The Playwright config starts the frontend dev server automatically. Optional env vars: `PW_TEST_EMAIL`, `PW_TEST_PASSWORD` (defaults: admin@test.com / testpass123).
+
 ## Build
 
 ```bash

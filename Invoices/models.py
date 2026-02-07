@@ -5,6 +5,12 @@ from django.db import models
 from ServiceRequests.models import ServiceRequest
 
 
+class PaymentMethod(models.TextChoices):
+    CASH = "cash", "Cash"
+    MOMO = "momo", "MoMo (Mobile Money)"
+    POS = "pos", "POS (Card)"
+
+
 class Invoice(models.Model):
     service_request = models.ForeignKey(ServiceRequest, on_delete=models.CASCADE)
     subtotal = models.DecimalField(
@@ -27,6 +33,13 @@ class Invoice(models.Model):
         related_name="invoices",
     )
     paid = models.BooleanField(default=False)
+    payment_method = models.CharField(
+        max_length=20,
+        choices=PaymentMethod.choices,
+        blank=True,
+        null=True,
+        help_text="How the customer paid (when paid=True)",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

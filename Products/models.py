@@ -20,8 +20,31 @@ class UnitOfMeasure(models.TextChoices):
 
 
 class Product(models.Model):
+    """Product catalog. Core fields for brake parts: FMSI, application, position, price."""
     name = models.CharField(max_length=200)
     sku = models.CharField(max_length=80, unique=True, blank=True, null=True)
+    fmsi_number = models.CharField(
+        max_length=80,
+        blank=True,
+        null=True,
+        db_index=True,
+        help_text="FMSI brake pad number (industry standard)",
+    )
+    application = models.TextField(
+        blank=True,
+        help_text="Vehicle models this product applies to, comma-separated (e.g. Toyota Corolla 2009-2019, Honda Civic)",
+    )
+    product_type = models.CharField(
+        max_length=80,
+        blank=True,
+        db_index=True,
+        help_text="Product type from catalog (e.g. BRAKEPAD, DISK). From Excel PRODUCT column.",
+    )
+    position = models.CharField(
+        max_length=20,
+        blank=True,
+        help_text="Installation position: FRONT, REAR, or other",
+    )
     category = models.CharField(
         max_length=20,
         choices=ProductCategory.choices,
@@ -50,6 +73,13 @@ class Product(models.Model):
 
     def __str__(self):
         return self.name
+
+    @property
+    def applications_list(self):
+        """Parse application into list of vehicle models (comma-separated, stripped)."""
+        if not self.application or not self.application.strip():
+            return []
+        return [a.strip() for a in self.application.split(",") if a.strip()]
 
     @property
     def margin_percent(self):

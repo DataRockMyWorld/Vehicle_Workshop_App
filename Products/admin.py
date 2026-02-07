@@ -6,6 +6,9 @@ from .models import Product
 class ProductAdmin(admin.ModelAdmin):
     list_display = (
         "name",
+        "fmsi_number",
+        "product_type",
+        "position",
         "sku",
         "category",
         "brand",
@@ -16,8 +19,8 @@ class ProductAdmin(admin.ModelAdmin):
         "margin_display",
         "is_active",
     )
-    list_filter = ("category", "is_active", "unit_of_measure")
-    search_fields = ("name", "sku", "brand", "part_number")
+    list_filter = ("category", "product_type", "is_active", "unit_of_measure")
+    search_fields = ("name", "sku", "fmsi_number", "application", "brand", "part_number", "product_type")
     list_editable = ("is_active",)
     ordering = ("name",)
 

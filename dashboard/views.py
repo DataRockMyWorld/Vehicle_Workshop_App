@@ -16,6 +16,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from accounts.permissions import user_site_id
 from dashboard.permissions import CanSeeAllSites
 from Invoices.models import Invoice
 from ServiceRequests.models import ProductUsage
@@ -27,6 +28,63 @@ from Customers.models import Customer
 from Vehicles.models import Vehicle
 
 
+class SiteDashboardView(APIView):
+    """
+    Sales metrics for site-scoped dashboard.
+    Returns revenue and sales counts for today and this week, filtered by user's site.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        sid = user_site_id(request.user)
+        now = timezone.now()
+        # Rolling windows: last 7 days and previous 7 days (avoids calendar week boundary issues)
+        week_ago = now - timedelta(days=7)
+        two_weeks_ago = now - timedelta(days=14)
+        # Today: start of day in configured timezone
+        local_now = timezone.localtime(now)
+        today_start = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
+
+        inv_qs = Invoice.objects.select_related("service_request")
+        if sid is not None:
+            inv_qs = inv_qs.filter(service_request__site_id=sid)
+
+        today_inv = inv_qs.filter(created_at__gte=today_start)
+        week_inv = inv_qs.filter(created_at__gte=week_ago)
+        prev_week_inv = inv_qs.filter(created_at__gte=two_weeks_ago, created_at__lt=week_ago)
+
+        revenue_today = today_inv.aggregate(t=Sum("total_cost"))["t"] or Decimal("0")
+        revenue_week = week_inv.aggregate(t=Sum("total_cost"))["t"] or Decimal("0")
+        revenue_prev_week = prev_week_inv.aggregate(t=Sum("total_cost"))["t"] or Decimal("0")
+        sales_today = today_inv.count()
+        sales_week = week_inv.count()
+        sales_prev_week = prev_week_inv.count()
+
+        paid_today = today_inv.filter(paid=True).aggregate(t=Sum("total_cost"))["t"] or Decimal("0")
+        unpaid_today = today_inv.filter(paid=False).aggregate(t=Sum("total_cost"))["t"] or Decimal("0")
+
+        data = {
+            "revenue_today": str(round(revenue_today, 2)),
+            "revenue_week": str(round(revenue_week, 2)),
+            "revenue_prev_week": str(round(revenue_prev_week, 2)),
+            "sales_count_today": sales_today,
+            "sales_count_week": sales_week,
+            "sales_count_prev_week": sales_prev_week,
+            "paid_today": str(round(paid_today, 2)),
+            "unpaid_today": str(round(unpaid_today, 2)),
+        }
+        if request.query_params.get("debug"):
+            data["_debug"] = {
+                "user_site_id": sid,
+                "week_ago": str(week_ago),
+                "today_start": str(today_start),
+                "total_invoices_in_query": inv_qs.count(),
+            }
+        resp = Response(data)
+        resp["Cache-Control"] = "no-store, no-cache, must-revalidate"
+        return resp
+
+
 class DashboardView(APIView):
     """Aggregated metrics for CEO/MD overview. Requires HQ access (superuser or site=null)."""
 
@@ -34,25 +92,36 @@ class DashboardView(APIView):
 
     def get(self, request):
         period_days = min(365, max(7, int(request.query_params.get("period", 30))))
-        cache_key = f"dashboard:{request.user.id}:{period_days}"
+        site_id = request.query_params.get("site_id")
+        try:
+            site_id = int(site_id) if site_id else None
+        except (ValueError, TypeError):
+            site_id = None
+        cache_key = f"dashboard:{request.user.id}:{period_days}:{site_id or 'all'}"
         cached = cache.get(cache_key)
         if cached is not None:
             return Response(cached)
 
         since = timezone.now() - timedelta(days=period_days)
 
-        # Summary counts
+        # Summary counts (optionally filtered by site)
         sites_qs = Site.objects.all()
         sr_qs = ServiceRequest.objects.filter(created_at__gte=since)
+        inv_qs = Invoice.objects.filter(created_at__gte=since)
+        if site_id:
+            sr_qs = sr_qs.filter(site_id=site_id)
+            inv_qs = inv_qs.filter(service_request__site_id=site_id)
+
         status_counts = dict(
             sr_qs.values("status").annotate(cnt=Count("id")).values_list("status", "cnt")
         )
-        total_revenue = (
-            Invoice.objects.filter(created_at__gte=since).aggregate(
-                total=Sum("total_cost")
-            )["total"]
-            or Decimal("0")
+        total_revenue = inv_qs.aggregate(total=Sum("total_cost"))["total"] or Decimal("0")
+
+        low_stock_qs = Inventory.objects.filter(
+            reorder_level__gt=0, quantity_on_hand__lte=F("reorder_level")
         )
+        if site_id:
+            low_stock_qs = low_stock_qs.filter(site_id=site_id)
 
         summary = {
             "total_sites": sites_qs.count(),
@@ -61,17 +130,16 @@ class DashboardView(APIView):
             "in_progress": status_counts.get("In Progress", 0),
             "completed": status_counts.get("Completed", 0),
             "total_revenue": str(round(total_revenue, 2)),
-            "total_customers": Customer.objects.count(),
-            "total_mechanics": Mechanic.objects.count(),
-            "total_vehicles": Vehicle.objects.count(),
-            "low_stock_count": Inventory.objects.filter(
-                reorder_level__gt=0, quantity_on_hand__lte=F("reorder_level")
-            ).count(),
+            "total_customers": Customer.objects.count() if not site_id else Customer.objects.filter(servicerequest__site_id=site_id).distinct().count(),
+            "total_mechanics": Mechanic.objects.count() if not site_id else Mechanic.objects.filter(site_id=site_id).count(),
+            "total_vehicles": Vehicle.objects.count() if not site_id else Vehicle.objects.filter(servicerequest__site_id=site_id).distinct().count(),
+            "low_stock_count": low_stock_qs.count(),
         }
 
-        # Per-site breakdown
+        # Per-site breakdown (all sites, or single selected site)
         by_site = []
-        for site in sites_qs:
+        sites_to_show = sites_qs.filter(pk=site_id) if site_id else sites_qs
+        for site in sites_to_show:
             site_sr = ServiceRequest.objects.filter(site=site, created_at__gte=since)
             site_invoices = Invoice.objects.filter(
                 service_request__site=site, created_at__gte=since
@@ -101,25 +169,17 @@ class DashboardView(APIView):
         requests_trend = [{"date": str(t["date"]), "count": t["count"]} for t in sr_trend]
 
         # Revenue trend (by day, from invoices)
-        inv_trend = (
-            Invoice.objects.filter(created_at__gte=since)
-            .annotate(date=TruncDate("created_at"))
-            .values("date")
-            .annotate(total=Sum("total_cost"))
-            .order_by("date")
-        )
+        inv_trend_qs = inv_qs.annotate(date=TruncDate("created_at")).values("date").annotate(total=Sum("total_cost")).order_by("date")
         revenue_trend = [
             {"date": str(t["date"]), "total": str(round(t["total"] or 0, 2))}
-            for t in inv_trend
+            for t in inv_trend_qs
         ]
 
         # Low stock items
         low_stock = list(
-            Inventory.objects.filter(
-                reorder_level__gt=0, quantity_on_hand__lte=F("reorder_level")
+            low_stock_qs.select_related("product", "site").values(
+                "id", "product__name", "site__name", "quantity_on_hand", "reorder_level"
             )
-            .select_related("product", "site")
-            .values("id", "product__name", "site__name", "quantity_on_hand", "reorder_level")
         )
         low_stock_items = [
             {
@@ -132,9 +192,11 @@ class DashboardView(APIView):
             for x in low_stock
         ]
 
+        sites_list = [{"id": s.id, "name": s.name} for s in sites_qs]
         payload = {
             "summary": summary,
             "by_site": by_site,
+            "sites": sites_list,
             "requests_trend": requests_trend,
             "revenue_trend": revenue_trend,
             "low_stock_items": low_stock_items,
@@ -144,17 +206,16 @@ class DashboardView(APIView):
         return Response(payload)
 
 
-def _build_activities(limit=30):
-    """Build unified activity feed from ServiceRequests, Invoices, InventoryTransactions."""
+def _build_activities(limit=5, site_id=None):
+    """Build unified activity feed from ServiceRequests, Invoices, InventoryTransactions.
+    Optional site_id: filter to that site's economic activity."""
     activities = []
     since = timezone.now() - timedelta(hours=24)  # Last 24h
 
-    # Service requests created
-    for sr in (
-        ServiceRequest.objects.filter(created_at__gte=since)
-        .select_related("site", "vehicle")
-        .order_by("-created_at")[:limit]
-    ):
+    sr_base = ServiceRequest.objects.filter(created_at__gte=since)
+    if site_id:
+        sr_base = sr_base.filter(site_id=site_id)
+    for sr in sr_base.select_related("site", "vehicle").order_by("-created_at")[:limit]:
         activities.append(
             {
                 "type": "service_request_created",
@@ -167,11 +228,12 @@ def _build_activities(limit=30):
         )
 
     # Invoices = jobs completed
-    for inv in (
-        Invoice.objects.filter(created_at__gte=since)
-        .select_related("service_request", "service_request__site", "service_request__vehicle")
-        .order_by("-created_at")[:limit]
-    ):
+    inv_base = Invoice.objects.filter(created_at__gte=since).select_related(
+        "service_request", "service_request__site", "service_request__vehicle"
+    )
+    if site_id:
+        inv_base = inv_base.filter(service_request__site_id=site_id)
+    for inv in inv_base.order_by("-created_at")[:limit]:
         sr = inv.service_request
         activities.append(
             {
@@ -185,11 +247,12 @@ def _build_activities(limit=30):
         )
 
     # Inventory transactions
-    for tx in (
-        InventoryTransaction.objects.filter(created_at__gte=since)
-        .select_related("inventory", "inventory__site", "inventory__product")
-        .order_by("-created_at")[:limit]
-    ):
+    tx_base = InventoryTransaction.objects.filter(created_at__gte=since).select_related(
+        "inventory", "inventory__site", "inventory__product"
+    )
+    if site_id:
+        tx_base = tx_base.filter(inventory__site_id=site_id)
+    for tx in tx_base.order_by("-created_at")[:limit]:
         inv = tx.inventory
         action = tx.transaction_type.replace("_", " ").title()
         activities.append(
@@ -209,17 +272,23 @@ def _build_activities(limit=30):
 
 
 class DashboardActivitiesView(APIView):
-    """Live activity feed for executive dashboard. Lightweight, intended for polling."""
+    """Live activity feed for executive dashboard. Lightweight, intended for polling.
+    Optional ?site_id=N to filter to a specific site's economic activity."""
 
     permission_classes = [IsAuthenticated, CanSeeAllSites]
 
     def get(self, request):
-        limit = min(50, max(10, int(request.query_params.get("limit", 25))))
-        cache_key = f"dashboard:activities:{limit}"
+        limit = min(50, max(1, int(request.query_params.get("limit", 5))))
+        site_id = request.query_params.get("site_id")
+        try:
+            site_id = int(site_id) if site_id else None
+        except (ValueError, TypeError):
+            site_id = None
+        cache_key = f"dashboard:activities:{limit}:{site_id or 'all'}"
         cached = cache.get(cache_key)
         if cached is not None:
             return Response(cached)
-        activities = _build_activities(limit=limit)
+        activities = _build_activities(limit=limit, site_id=site_id)
         cache.set(cache_key, {"activities": activities}, timeout=30)  # 30s for live feel
         return Response({"activities": activities})
 
@@ -296,11 +365,12 @@ class CsvExportView(APIView):
             if sid is not None:
                 qs = qs.filter(service_request__site_id=sid)
             qs = qs.select_related("service_request", "service_request__customer").order_by("-created_at")
-            w.writerow(["id", "service_request_id", "customer", "subtotal", "discount", "total", "paid", "created_at"])
+            w.writerow(["id", "service_request_id", "customer", "subtotal", "discount", "total", "paid", "payment_method", "created_at"])
             for inv in qs:
                 w.writerow([
                     inv.id, inv.service_request_id, str(inv.service_request.customer),
                     inv.subtotal, inv.discount_amount, inv.total_cost, inv.paid,
+                    inv.payment_method or "",
                     inv.created_at.strftime("%Y-%m-%d %H:%M"),
                 ])
         elif resource == "inventory":
