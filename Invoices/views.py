@@ -212,7 +212,12 @@ class InvoicePdfView(APIView):
 
 
 def _invoice_queryset(user):
-    qs = Invoice.objects.select_related("service_request", "service_request__site").all()
+    qs = Invoice.objects.select_related(
+        "service_request",
+        "service_request__customer",
+        "service_request__vehicle",
+        "service_request__site",
+    ).all()
     sid = user_site_id(user)
     if sid is not None:
         qs = qs.filter(service_request__site_id=sid)
@@ -220,7 +225,12 @@ def _invoice_queryset(user):
 
 
 class InvoiceListCreateView(generics.ListCreateAPIView):
-    queryset = Invoice.objects.select_related("service_request", "service_request__site").all()
+    queryset = Invoice.objects.select_related(
+        "service_request",
+        "service_request__customer",
+        "service_request__vehicle",
+        "service_request__site",
+    ).all()
     serializer_class = InvoiceSerializer
     permission_classes = [IsAuthenticated, IsReadOnlyForHQ]
 

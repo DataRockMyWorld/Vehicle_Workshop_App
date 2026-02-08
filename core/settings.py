@@ -162,9 +162,32 @@ SIMPLE_JWT = {
 }
 
 SPECTACULAR_SETTINGS = {
-    "TITLE": "Workshop Management App API",
-    "DESCRIPTION": "Documentation for the Workshop Management App API",
+    "TITLE": "Vehicle Workshop Management API",
+    "DESCRIPTION": "REST API for vehicle workshop operations: customers, vehicles, service requests, inventory, invoicing, and reporting. Authenticate via JWT (login/refresh) before calling protected endpoints.",
     "VERSION": "1.0.0",
+    "SCHEMA_PATH_PREFIX": r"/api/v[0-9]+/",
+    "TAGS": [
+        {"name": "auth", "description": "Authentication (JWT login, refresh, logout)"},
+        {"name": "customers", "description": "Customer records and walk-in sales"},
+        {"name": "vehicles", "description": "Vehicle records linked to customers"},
+        {"name": "mechanic", "description": "Mechanics assigned to sites"},
+        {"name": "service_request", "description": "Service requests and product usage"},
+        {"name": "invoices", "description": "Invoicing and payments"},
+        {"name": "inventory", "description": "Stock and low-stock alerts"},
+        {"name": "products", "description": "Product catalog and search"},
+        {"name": "sites", "description": "Workshop sites/locations"},
+        {"name": "appointments", "description": "Service appointment scheduling"},
+        {"name": "dashboard", "description": "CEO/site dashboards and reports"},
+        {"name": "audit", "description": "Audit trail of changes"},
+        {"name": "promotions", "description": "Active promotions"},
+    ],
+    "SWAGGER_UI_SETTINGS": {
+        "deepLinking": True,
+        "persistAuthorization": True,
+        "displayOperationId": True,
+        "filter": True,
+    },
+    "SERVERS": [{"url": "/", "description": "Current host"}],
 }
 
 # Jazzmin admin theme

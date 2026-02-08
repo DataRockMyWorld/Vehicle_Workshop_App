@@ -180,6 +180,8 @@ This app uses Celery for handling background tasks like sending notifications an
 
 ## API Endpoints
 
+**Interactive API docs**: [Swagger UI](/api/schema/docs/) at `/api/schema/docs/` (when backend is running). Use the Authorize button with a JWT Bearer token to try protected endpoints. See [docs/API_ORGANIZATION.md](docs/API_ORGANIZATION.md) for URL structure and conventions.
+
 ### Authentication
 
 | Method | Endpoint           | Description                          |

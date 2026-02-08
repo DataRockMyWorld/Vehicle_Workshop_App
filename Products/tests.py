@@ -1,24 +1,49 @@
+from decimal import Decimal
+
 from django.urls import reverse
+from rest_framework import status
 from rest_framework.test import APITestCase
 
-from .models import Product
-from .serializers import ProductSerializer
-from rest_framework import status
+from core.test_utils import WorkshopAPITestCaseMixin
+from Products.models import Product
 
-# Create your tests here.
 
-class ProductTestCase(APITestCase):
+class ProductAPITestCase(WorkshopAPITestCaseMixin, APITestCase):
     @classmethod
     def setUpTestData(cls):
-        cls.product = Product.objects.create(
-            name = 'Test Product',
-            unit_price = 10.00,
-        )
-    
-    def test_product_list(self):
-        url = reverse('product-list')
+        cls.setUpWorkshopData()
+
+    def test_product_list_authenticated(self):
+        """Authenticated user can list products."""
+        self.client.force_authenticate(user=self.superuser)
+        url = reverse("product-list")
         response = self.client.get(url)
-        serializer_data = ProductSerializer([self.product], many=True).data
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(serializer_data, response.data)
-    
+        data = response.json() if hasattr(response, "json") else response.data
+        items = data if isinstance(data, list) else data.get("results", [])
+        self.assertGreaterEqual(len(items), 1)
+        self.assertEqual(items[0]["name"], self.product.name)
+
+    def test_superuser_can_create_product(self):
+        """Superuser can create products."""
+        self.client.force_authenticate(user=self.superuser)
+        url = reverse("product-list")
+        payload = {
+            "name": "New Brake Disk",
+            "sku": "BD-001",
+            "unit_price": "200.00",
+        }
+        response = self.client.post(url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["name"], "New Brake Disk")
+
+    def test_non_superuser_cannot_create_product(self):
+        """Site user cannot create products (read-only)."""
+        self.client.force_authenticate(user=self.site_user)
+        url = reverse("product-list")
+        payload = {
+            "name": "Unauthorized Product",
+            "unit_price": "50.00",
+        }
+        response = self.client.post(url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)

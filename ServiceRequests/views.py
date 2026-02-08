@@ -83,7 +83,9 @@ class CompleteServiceRequestView(APIView):
     permission_classes = [IsAuthenticated, IsReadOnlyForHQ]
 
     def post(self, request, pk):
-        base = ServiceRequest.objects.all()
+        base = ServiceRequest.objects.select_related(
+            "customer", "vehicle", "site", "assigned_mechanic", "service_type", "service_type__category"
+        ).all()
         sr = get_object_or_404(filter_queryset_by_site(base, request.user), pk=pk)
         if sr.status == 'Completed':
             return Response({'detail': 'Already completed.'}, status=400)

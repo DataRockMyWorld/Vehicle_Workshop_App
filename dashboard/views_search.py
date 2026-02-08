@@ -24,7 +24,7 @@ class SearchView(APIView):
         sid = user_site_id(request.user)
         limit = min(20, max(5, int(request.query_params.get("limit", 10))))
 
-        sr_qs = ServiceRequest.objects.select_related("customer", "vehicle", "site").filter(
+        base_q = (
             Q(description__icontains=q)
             | Q(customer__first_name__icontains=q)
             | Q(customer__last_name__icontains=q)
@@ -33,14 +33,17 @@ class SearchView(APIView):
             | Q(vehicle__model__icontains=q)
         )
         try:
-            sr_qs = sr_qs | ServiceRequest.objects.select_related("customer", "vehicle", "site").filter(
-                id=int(q)
-            )
+            base_q |= Q(id=int(q))
         except (ValueError, TypeError):
             pass
+        sr_qs = (
+            ServiceRequest.objects.select_related("customer", "vehicle", "site")
+            .filter(base_q)
+            .distinct()
+        )
         if sid is not None:
             sr_qs = sr_qs.filter(site_id=sid)
-        sr_qs = sr_qs.distinct()[:limit]
+        sr_qs = sr_qs[:limit]
         service_requests = [
             {
                 "id": sr.id,
