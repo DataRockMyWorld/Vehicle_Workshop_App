@@ -17,7 +17,16 @@ class InventoryListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated, IsReadOnlyForHQ]
 
     def get_queryset(self):
-        return filter_queryset_by_site(super().get_queryset(), self.request.user)
+        qs = filter_queryset_by_site(super().get_queryset(), self.request.user)
+        site_id = self.request.query_params.get("site_id")
+        if site_id:
+            try:
+                qs = qs.filter(site_id=int(site_id))
+            except (ValueError, TypeError):
+                pass
+        if self.request.query_params.get("low_stock", "").lower() in ("1", "true", "yes"):
+            qs = qs.filter(reorder_level__gt=0, quantity_on_hand__lte=models.F("reorder_level"))
+        return qs
 
     def perform_create(self, serializer):
         user = self.request.user

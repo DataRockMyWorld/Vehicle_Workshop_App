@@ -63,6 +63,15 @@ class InvoiceAPITestCase(WorkshopAPITestCaseMixin, APITestCase):
         self.assertIn("application/pdf", response.get("Content-Type", ""))
         self.assertGreater(len(response.content), 100)
 
+    def test_invoice_receipt_download(self):
+        """GET receipt PDF returns 200 and pdf content-type."""
+        self.client.force_authenticate(user=self.superuser)
+        url = reverse("invoice-receipt", kwargs={"pk": self.invoice.pk})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("application/pdf", response.get("Content-Type", ""))
+        self.assertGreater(len(response.content), 100)
+
     def test_site_user_cannot_see_other_site_invoice(self):
         """Site user cannot access invoice from another site."""
         from ServiceRequests.models import ServiceRequest

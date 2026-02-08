@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { mechanics, sites } from '../api/services'
 import { useAuth } from '../context/AuthContext'
 import { apiErrorMsg, toList } from '../api/client'
-import { usePagination } from '../hooks/usePagination'
+import { usePaginatedList } from '../hooks/usePaginatedList'
 import { useAsyncData } from '../hooks/useAsyncData'
 import Pagination from '../components/Pagination'
 import PageError from '../components/PageError'
@@ -11,13 +11,12 @@ import './GenericListPage.css'
 
 export default function MechanicsPage() {
   const { canWrite, siteId: userSiteId } = useAuth()
-  const { data: rawData, loading, error, refetch } = useAsyncData(
-    () => Promise.all([mechanics.list(), sites.list()]),
+  const { items: list, count, loading, error, page, setPage, totalPages, pageSize, refetch } = usePaginatedList(
+    (p) => mechanics.list(p),
     []
   )
-  const [list, sitesList] = rawData
-    ? [toList(rawData[0]), toList(rawData[1])]
-    : [[], []]
+  const { data: sitesRaw } = useAsyncData(() => sites.list(), [])
+  const sitesList = toList(sitesRaw ?? null)
   const load = useCallback(() => refetch(), [refetch])
   const [formError, setFormError] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -28,8 +27,6 @@ export default function MechanicsPage() {
   useEffect(() => {
     if (userSiteId) setSite(String(userSiteId))
   }, [userSiteId])
-
-  const { paginatedItems, currentPage, totalPages, pageSize, setPage, setPageSize } = usePagination(list, 10)
 
   const byId = (arr, id) => (arr || []).find((x) => x.id === parseInt(id, 10))
   const siteName = (id) => {
@@ -157,7 +154,7 @@ export default function MechanicsPage() {
               </tr>
             </thead>
             <tbody>
-              {paginatedItems.map((r) => (
+              {list.map((r) => (
                 <tr key={r.id}>
                   <td>
                     <Link to={`/mechanics/${r.id}`} className="history-link">
@@ -171,13 +168,12 @@ export default function MechanicsPage() {
               </tbody>
               </table>
               <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              totalItems={list.length}
-              pageSize={pageSize}
-              onPageChange={setPage}
-              onPageSizeChange={setPageSize}
-                pageSizeOptions={[10, 20, 50]}
+                currentPage={page}
+                totalPages={totalPages}
+                totalItems={count}
+                pageSize={pageSize}
+                onPageChange={setPage}
+                pageSizeOptions={[]}
               />
             </>
           )}

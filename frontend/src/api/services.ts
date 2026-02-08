@@ -27,12 +27,13 @@ export const serviceCategories = {
 }
 
 export const serviceRequests = {
-  list: (params: { customer_id?: number; vehicle_id?: number; mechanic_id?: number; parts_only?: boolean; page?: number } = {}) => {
+  list: (params: { customer_id?: number; vehicle_id?: number; mechanic_id?: number; parts_only?: boolean; status?: string; page?: number } = {}) => {
     const sp = buildApiParams({
       customer_id: params.customer_id,
       vehicle_id: params.vehicle_id,
       mechanic_id: params.mechanic_id,
       parts_only: params.parts_only ? true : undefined,
+      status: params.status || undefined,
       page: params.page,
     })
     return api(withParams('service_request/', sp))
@@ -111,7 +112,14 @@ export const appointments = {
 }
 
 export const inventory = {
-  list: (page?: number) => api(page ? `inventory/?page=${page}` : 'inventory/'),
+  list: (params?: { page?: number; site_id?: number | string; low_stock?: boolean }) => {
+    const p = buildApiParams({
+      page: params?.page,
+      site_id: params?.site_id,
+      low_stock: params?.low_stock ? true : undefined,
+    })
+    return api(withParams('inventory/', p))
+  },
   lowStock: () => api('inventory/low-stock/'),
   get: (id: number | string) => api(`inventory/${id}/`),
   create: (body: Record<string, unknown>) => api('inventory/', { method: 'POST', body: JSON.stringify(body) }),
@@ -123,7 +131,10 @@ export const invoices = {
   list: (page?: number) => api(page ? `invoices/?page=${page}` : 'invoices/'),
   get: (id: number | string) => api(`invoices/${id}/`),
   update: (id: number | string, body: Record<string, unknown>) => api(`invoices/${id}/`, { method: 'PATCH', body: JSON.stringify(body) }),
-  downloadPdf: (id: number | string) => apiDownload(`invoices/${id}/pdf/`, `invoice-${id}.pdf`),
+  /** A4 invoice PDF – international standard, print-ready */
+  downloadPdf: (id: number | string) => apiDownload(`invoices/${id}/pdf/`, `feeling-autopart-invoice-${id}.pdf`),
+  /** 80mm thermal receipt PDF – POS format */
+  downloadReceipt: (id: number | string) => apiDownload(`invoices/${id}/receipt/`, `receipt-${id}.pdf`),
 }
 
 export const promotions = {
@@ -136,7 +147,27 @@ export const audit = {
 
 export const reports = {
   get: (period = 30) => api(`dashboard/reports/?period=${period}`),
-  exportCsv: (resource: string) => apiDownload(`dashboard/export/?resource=${resource}`, `${resource}.csv`),
+  exportCsv: (resource: string, params?: { date_from?: string; date_to?: string; period?: number }) => {
+    const sp = new URLSearchParams({ resource })
+    if (params?.date_from) sp.set('date_from', params.date_from)
+    if (params?.date_to) sp.set('date_to', params.date_to)
+    if (params?.period) sp.set('period', String(params.period))
+    return apiDownload(`dashboard/export/?${sp}`, `${resource}.csv`)
+  },
+  /**
+   * Audit-ready sales report. Supports date_from/date_to or period.
+   * GET /api/v1/dashboard/sales-report/
+   */
+  salesReport: (params: { date_from?: string; date_to?: string; period?: number; site_id?: number; group_by?: 'day' | 'week' | 'month' } = {}) => {
+    const p = buildApiParams({
+      date_from: params.date_from,
+      date_to: params.date_to,
+      period: params.period,
+      site_id: params.site_id,
+      group_by: params.group_by,
+    })
+    return api(withParams('dashboard/sales-report/', p))
+  },
 }
 
 export const productUsage = {

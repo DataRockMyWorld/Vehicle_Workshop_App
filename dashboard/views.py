@@ -4,13 +4,13 @@ Only accessible to users with can_see_all_sites (superuser or site=null).
 """
 import csv
 import io
-from datetime import timedelta
+from datetime import datetime, timedelta
 from decimal import Decimal
 
 from django.core.cache import cache
 from django.http import HttpResponse
-from django.db.models import Count, F, Sum
-from django.db.models.functions import TruncDate
+from django.db.models import Count, F, Q, Sum
+from django.db.models.functions import TruncDate, TruncWeek, TruncMonth
 from django.utils import timezone
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -18,7 +18,7 @@ from rest_framework.views import APIView
 
 from accounts.permissions import user_site_id
 from dashboard.permissions import CanSeeAllSites
-from Invoices.models import Invoice
+from Invoices.models import Invoice, PaymentMethod
 from ServiceRequests.models import ProductUsage
 from Inventories.models import Inventory, InventoryTransaction
 from Mechanics.models import Mechanic
@@ -26,6 +26,72 @@ from ServiceRequests.models import ServiceRequest
 from Site.models import Site
 from Customers.models import Customer
 from Vehicles.models import Vehicle
+
+
+# --- Date range parsing for reports ---
+MAX_REPORT_DAYS = 730  # 2 years
+
+
+def _parse_date(s: str):
+    """Parse YYYY-MM-DD to date. Returns None if invalid."""
+    if not s or not isinstance(s, str):
+        return None
+    try:
+        return datetime.strptime(s.strip()[:10], "%Y-%m-%d").date()
+    except ValueError:
+        return None
+
+
+def _get_report_date_range(request):
+    """
+    Resolve date_from, date_to from request.
+    Supports: date_from + date_to (explicit) OR period (rolling days).
+    Returns (date_from, date_to) as timezone-aware datetimes (start/end of day in server TZ).
+    Raises ValueError on invalid params.
+    """
+    params = request.query_params
+    date_from_str = params.get("date_from")
+    date_to_str = params.get("date_to")
+    period_str = params.get("period")
+
+    if date_from_str and date_to_str:
+        d_from = _parse_date(date_from_str)
+        d_to = _parse_date(date_to_str)
+        if not d_from or not d_to:
+            raise ValueError("date_from and date_to must be YYYY-MM-DD")
+        if d_from > d_to:
+            raise ValueError("date_from must be on or before date_to")
+        delta = (d_to - d_from).days
+        if delta > MAX_REPORT_DAYS:
+            raise ValueError(f"Date range must not exceed {MAX_REPORT_DAYS} days")
+    elif period_str:
+        try:
+            period = int(period_str)
+        except (ValueError, TypeError):
+            raise ValueError("period must be an integer")
+        if period < 1 or period > MAX_REPORT_DAYS:
+            raise ValueError(f"period must be between 1 and {MAX_REPORT_DAYS}")
+        end = timezone.now()
+        start = end - timedelta(days=period)
+        # Use date boundaries for consistency
+        local_end = timezone.localtime(end)
+        local_start = timezone.localtime(start)
+        d_from = local_start.date()
+        d_to = local_end.date()
+    else:
+        # Default: last 30 days
+        end = timezone.now()
+        start = end - timedelta(days=30)
+        local_end = timezone.localtime(end)
+        local_start = timezone.localtime(start)
+        d_from = local_start.date()
+        d_to = local_end.date()
+
+    # Start of day and end of day in server timezone
+    tz = timezone.get_current_timezone()
+    start_dt = timezone.make_aware(datetime.combine(d_from, datetime.min.time()), tz)
+    end_dt = timezone.make_aware(datetime.combine(d_to, datetime.max.time().replace(microsecond=0)), tz)
+    return start_dt, end_dt
 
 
 class SiteDashboardView(APIView):
@@ -333,24 +399,217 @@ class ReportsView(APIView):
         })
 
 
+class SalesReportView(APIView):
+    """
+    Audit-ready sales report. Standard format for accounting and audit purposes.
+
+    Query params:
+      date_from, date_to: YYYY-MM-DD (explicit range, preferred for audit)
+      period: integer days (rolling from today, fallback)
+      site_id: optional, CEO only - filter to specific site
+      group_by: day | week | month - granularity for trend (default: day)
+
+    Returns: summary, by_site, by_date, by_payment_method, transactions (traceable).
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+            start_dt, end_dt = _get_report_date_range(request)
+        except ValueError as e:
+            return Response({"detail": str(e)}, status=400)
+
+        sid = user_site_id(request.user)
+        site_filter = request.query_params.get("site_id")
+        if sid is not None:
+            filter_site_id = sid
+        else:
+            try:
+                filter_site_id = int(site_filter) if site_filter else None
+            except (ValueError, TypeError):
+                filter_site_id = None
+
+        group_by = request.query_params.get("group_by", "day").lower()
+        if group_by not in ("day", "week", "month"):
+            group_by = "day"
+
+        inv_qs = Invoice.objects.filter(
+            created_at__gte=start_dt,
+            created_at__lte=end_dt,
+        ).select_related("service_request", "service_request__site", "service_request__customer")
+        if filter_site_id is not None:
+            inv_qs = inv_qs.filter(service_request__site_id=filter_site_id)
+
+        # --- Summary ---
+        agg = inv_qs.aggregate(
+            total_revenue=Sum("total_cost"),
+            count=Count("id"),
+        )
+        paid_agg = inv_qs.filter(paid=True).aggregate(paid_revenue=Sum("total_cost"))
+        unpaid_agg = inv_qs.filter(paid=False).aggregate(unpaid_revenue=Sum("total_cost"))
+
+        total_revenue = agg["total_revenue"] or Decimal("0")
+        count = agg["count"] or 0
+        paid_revenue = paid_agg["paid_revenue"] or Decimal("0")
+        unpaid_revenue = unpaid_agg["unpaid_revenue"] or Decimal("0")
+        avg_ticket = round(total_revenue / count, 2) if count > 0 else Decimal("0")
+
+        # --- By site ---
+        by_site_data = (
+            inv_qs.values("service_request__site_id", "service_request__site__name")
+            .annotate(
+                revenue=Sum("total_cost"),
+                sales_count=Count("id"),
+            )
+            .order_by("service_request__site__name")
+        )
+        by_site = [
+            {
+                "site_id": x["service_request__site_id"],
+                "site_name": x["service_request__site__name"] or "—",
+                "revenue": str(round(x["revenue"] or 0, 2)),
+                "sales_count": x["sales_count"],
+            }
+            for x in by_site_data
+        ]
+
+        # --- By date (grouped) ---
+        trunc_fn = {"day": TruncDate, "week": TruncWeek, "month": TruncMonth}[group_by]
+        by_date_qs = (
+            inv_qs.annotate(period=trunc_fn("created_at"))
+            .values("period")
+            .annotate(revenue=Sum("total_cost"), sales_count=Count("id"))
+            .order_by("period")
+        )
+        by_date = [
+            {"period": str(x["period"]), "revenue": str(round(x["revenue"] or 0, 2)), "sales_count": x["sales_count"]}
+            for x in by_date_qs
+        ]
+
+        # --- By payment method ---
+        pm_qs = (
+            inv_qs.filter(paid=True)
+            .exclude(Q(payment_method__isnull=True) | Q(payment_method=""))
+            .values("payment_method")
+            .annotate(revenue=Sum("total_cost"), count=Count("id"))
+            .order_by("-revenue")
+        )
+        payment_labels = dict(PaymentMethod.choices)
+        by_payment_method = [
+            {
+                "payment_method": x["payment_method"],
+                "payment_method_label": payment_labels.get(x["payment_method"], x["payment_method"]),
+                "revenue": str(round(x["revenue"] or 0, 2)),
+                "count": x["count"],
+            }
+            for x in pm_qs
+        ]
+        unpaid_count = inv_qs.filter(paid=False).count()
+        if unpaid_count > 0 or unpaid_revenue > 0:
+            by_payment_method.append({
+                "payment_method": "unpaid",
+                "payment_method_label": "Unpaid / Pending",
+                "revenue": str(round(unpaid_revenue, 2)),
+                "count": unpaid_count,
+            })
+
+        # --- Transactions (traceable for audit) ---
+        transactions = list(
+            inv_qs.order_by("created_at").values(
+                "id",
+                "service_request_id",
+                "service_request__site_id",
+                "service_request__site__name",
+                "subtotal",
+                "discount_amount",
+                "total_cost",
+                "paid",
+                "payment_method",
+                "created_at",
+            )
+        )
+        transactions_serialized = [
+            {
+                "invoice_id": t["id"],
+                "service_request_id": t["service_request_id"],
+                "site_id": t["service_request__site_id"],
+                "site_name": t["service_request__site__name"] or "—",
+                "subtotal": str(t["subtotal"]),
+                "discount_amount": str(t["discount_amount"] or "0"),
+                "total_cost": str(t["total_cost"]),
+                "paid": t["paid"],
+                "payment_method": t["payment_method"] or "",
+                "created_at": t["created_at"].isoformat() if t["created_at"] else "",
+            }
+            for t in transactions
+        ]
+
+        payload = {
+            "report_metadata": {
+                "report_type": "sales_report",
+                "generated_at": timezone.now().isoformat(),
+                "date_from": start_dt.strftime("%Y-%m-%d"),
+                "date_to": end_dt.strftime("%Y-%m-%d"),
+                "scope": "all_sites" if filter_site_id is None else f"site_id={filter_site_id}",
+                "group_by": group_by,
+                "transaction_count": count,
+            },
+            "summary": {
+                "total_revenue": str(round(total_revenue, 2)),
+                "total_sales_count": count,
+                "paid_revenue": str(round(paid_revenue, 2)),
+                "unpaid_revenue": str(round(unpaid_revenue, 2)),
+                "average_ticket": str(avg_ticket),
+            },
+            "by_site": by_site,
+            "by_date": by_date,
+            "by_payment_method": by_payment_method,
+            "transactions": transactions_serialized,
+        }
+        return Response(payload)
+
+
 class CsvExportView(APIView):
     """
     Export data as CSV. ?resource=service_requests|invoices|inventory
+
+    Date range (for service_requests and invoices):
+      date_from, date_to: YYYY-MM-DD
+      period: integer days (rolling, default 365 if no dates)
+
     CEO: all data. Site user: their site only.
     """
 
     permission_classes = [IsAuthenticated]
+
+    def _get_export_date_range(self, request):
+        """Return (start_dt, end_dt) for export. Defaults to last 365 days if no params."""
+        params = request.query_params
+        if not any(k in params for k in ("date_from", "date_to", "period")):
+            end = timezone.now()
+            start = end - timedelta(days=365)
+            return start, end
+        return _get_report_date_range(request)
 
     def get(self, request):
         from accounts.permissions import user_site_id
 
         resource = request.query_params.get("resource", "service_requests")
         sid = user_site_id(request.user)
+        try:
+            start_dt, end_dt = self._get_export_date_range(request)
+        except ValueError as e:
+            return Response({"detail": str(e)}, status=400)
+
         output = io.StringIO()
         w = csv.writer(output)
 
         if resource == "service_requests":
-            qs = ServiceRequest.objects.filter(created_at__gte=timezone.now() - timedelta(days=365))
+            qs = ServiceRequest.objects.filter(
+                created_at__gte=start_dt,
+                created_at__lte=end_dt,
+            )
             if sid is not None:
                 qs = qs.filter(site_id=sid)
             qs = qs.select_related("customer", "vehicle", "site", "assigned_mechanic").order_by("-created_at")
@@ -361,14 +620,18 @@ class CsvExportView(APIView):
                     (sr.description or "")[:100], sr.created_at.strftime("%Y-%m-%d %H:%M"),
                 ])
         elif resource == "invoices":
-            qs = Invoice.objects.filter(created_at__gte=timezone.now() - timedelta(days=365))
+            qs = Invoice.objects.filter(
+                created_at__gte=start_dt,
+                created_at__lte=end_dt,
+            )
             if sid is not None:
                 qs = qs.filter(service_request__site_id=sid)
-            qs = qs.select_related("service_request", "service_request__customer").order_by("-created_at")
-            w.writerow(["id", "service_request_id", "customer", "subtotal", "discount", "total", "paid", "payment_method", "created_at"])
+            qs = qs.select_related("service_request", "service_request__customer", "service_request__site").order_by("-created_at")
+            w.writerow(["id", "service_request_id", "site_id", "customer", "subtotal", "discount", "total", "paid", "payment_method", "created_at"])
             for inv in qs:
+                sr = inv.service_request
                 w.writerow([
-                    inv.id, inv.service_request_id, str(inv.service_request.customer),
+                    inv.id, inv.service_request_id, sr.site_id, str(sr.customer),
                     inv.subtotal, inv.discount_amount, inv.total_cost, inv.paid,
                     inv.payment_method or "",
                     inv.created_at.strftime("%Y-%m-%d %H:%M"),

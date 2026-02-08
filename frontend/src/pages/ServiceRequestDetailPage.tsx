@@ -17,6 +17,8 @@ import Loader from '../components/Loader'
 import ProductSearch from '../components/ProductSearch'
 import { formatCurrency } from '../utils/currency'
 import { useAuth } from '../context/AuthContext'
+import Receipt from '../components/Receipt'
+import InvoiceDocument from '../components/InvoiceDocument'
 import './ServiceRequestDetailPage.css'
 
 function buildLookups(customers, vehicles, sites, mechanics) {
@@ -51,6 +53,8 @@ export default function ServiceRequestDetailPage() {
   const [addingPart, setAddingPart] = useState(false)
   const [completing, setCompleting] = useState(false)
   const [downloadingPdf, setDownloadingPdf] = useState(false)
+  const [downloadingReceipt, setDownloadingReceipt] = useState(false)
+  const [previewMode, setPreviewMode] = useState<'receipt' | 'invoice' | null>(null)
   const [assignMechanicId, setAssignMechanicId] = useState('')
   const [addProductId, setAddProductId] = useState('')
   const [addQty, setAddQty] = useState(1)
@@ -84,7 +88,8 @@ export default function ServiceRequestDetailPage() {
     return {
       ...u,
       productName: p?.name ?? `#${u.product}`,
-      sku: p?.sku,
+      sku: p?.sku ?? p?.part_number,
+      application: p?.application,
       unit: p?.unit_of_measure ?? 'each',
       unitPrice: price,
       lineTotal: price * qty,
@@ -619,6 +624,23 @@ export default function ServiceRequestDetailPage() {
                   )}
                   <button
                     type="button"
+                    className="btn btn--secondary btn--sm"
+                    onClick={async () => {
+                      setDownloadingReceipt(true)
+                      try {
+                        await invoices.downloadReceipt(invoiceForSr.id)
+                      } catch (e) {
+                        setFormError(apiErrorMsg(e))
+                      } finally {
+                        setDownloadingReceipt(false)
+                      }
+                    }}
+                    disabled={downloadingReceipt}
+                  >
+                    {downloadingReceipt ? '…' : 'Receipt (80mm)'}
+                  </button>
+                  <button
+                    type="button"
                     className="btn btn--primary btn--sm"
                     onClick={async () => {
                       setDownloadingPdf(true)
@@ -632,8 +654,24 @@ export default function ServiceRequestDetailPage() {
                     }}
                     disabled={downloadingPdf}
                   >
-                    {downloadingPdf ? 'Downloading…' : 'Download PDF'}
+                    {downloadingPdf ? '…' : 'Invoice (A4)'}
                   </button>
+                  <span className="invoice-card__preview">
+                    <button
+                      type="button"
+                      className="btn btn--ghost btn--sm"
+                      onClick={() => setPreviewMode(previewMode === 'receipt' ? null : 'receipt')}
+                    >
+                      {previewMode === 'receipt' ? 'Hide receipt' : 'Preview receipt'}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn--ghost btn--sm"
+                      onClick={() => setPreviewMode(previewMode === 'invoice' ? null : 'invoice')}
+                    >
+                      {previewMode === 'invoice' ? 'Hide invoice' : 'Preview invoice'}
+                    </button>
+                  </span>
                 </div>
               </div>
               <div className="invoice-card__body">
@@ -682,6 +720,89 @@ export default function ServiceRequestDetailPage() {
                   </div>
                 </div>
               </div>
+
+              {previewMode && (() => {
+                const siteData = sitesList?.find((s) => s.id === sr?.site)
+                const cust = customersList?.find((c) => c.id === sr?.customer)
+                const custName = cust ? `${cust.first_name} ${cust.last_name}` : '—'
+                const veh = sr?.vehicle && vehiclesList?.find((v) => v.id === sr.vehicle)
+                const vehicleInfo = veh ? `${veh.make} ${veh.model} (${veh.license_plate})` : 'Parts sale'
+                const dt = invoiceForSr.created_at
+                  ? new Date(invoiceForSr.created_at)
+                  : new Date()
+                const dtStr = dt.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                  + ' - ' + dt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+                const receiptItems = usageWithNames.map((u) => ({
+                  productName: u.productName,
+                  sku: u.sku,
+                  application: u.application ? u.application.split(',')[0].trim() : undefined,
+                  quantity_used: u.quantity_used,
+                  unitPrice: u.unitPrice,
+                  lineTotal: u.lineTotal,
+                }))
+                if (previewMode === 'receipt') {
+                  return (
+                    <div className="invoice-card__preview-wrap">
+                      <div className="invoice-card__preview-actions">
+                        <button type="button" className="btn btn--sm" onClick={() => window.print()}>
+                          Print receipt
+                        </button>
+                      </div>
+                      <div className="receipt-print-area">
+                        <Receipt
+                          branchName={siteData?.name ?? '—'}
+                          address={siteData?.location}
+                          phone={siteData?.contact_number}
+                          receiptNumber={invoiceForSr.id}
+                          invoiceNumber={invoiceForSr.id}
+                          dateTime={dtStr}
+                          terminalId={String(siteData?.id ?? '—')}
+                          items={receiptItems}
+                          laborCost={Number(sr?.labor_cost ?? 0)}
+                          subtotal={Number(invoiceForSr.subtotal ?? 0)}
+                          discountAmount={Number(invoiceForSr.discount_amount ?? 0)}
+                          total={Number(invoiceForSr.total_cost ?? 0)}
+                          paid={!!invoiceForSr.paid}
+                          paymentMethod={invoiceForSr.payment_method}
+                          paymentLabels={PAYMENT_LABELS}
+                        />
+                      </div>
+                    </div>
+                  )
+                }
+                return (
+                  <div className="invoice-card__preview-wrap">
+                    <div className="invoice-card__preview-actions">
+                      <button type="button" className="btn btn--sm" onClick={() => window.print()}>
+                        Print invoice
+                      </button>
+                    </div>
+                    <div className="invoice-print-area">
+                      <InvoiceDocument
+                        branchName={siteData?.name ?? '—'}
+                        address={siteData?.location}
+                        phone={siteData?.contact_number}
+                        invoiceNumber={invoiceForSr.id}
+                        invoiceDate={dtStr.split(' - ')[0]}
+                        dueDate={dtStr.split(' - ')[0]}
+                        jobRef={`SR#${sr?.id}`}
+                        customerName={custName}
+                        customerPhone={cust?.phone_number}
+                        customerEmail={cust?.email}
+                        vehicleInfo={vehicleInfo}
+                        items={receiptItems}
+                        laborCost={Number(sr?.labor_cost ?? 0)}
+                        subtotal={Number(invoiceForSr.subtotal ?? 0)}
+                        discountAmount={Number(invoiceForSr.discount_amount ?? 0)}
+                        total={Number(invoiceForSr.total_cost ?? 0)}
+                        paid={!!invoiceForSr.paid}
+                        paymentMethod={invoiceForSr.payment_method}
+                        paymentLabels={PAYMENT_LABELS}
+                      />
+                    </div>
+                  </div>
+                )
+              })()}
             </section>
           )}
         </div>

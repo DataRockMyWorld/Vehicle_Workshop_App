@@ -39,6 +39,9 @@ class ServiceRequestListCreateView(generics.ListCreateAPIView):
                 qs = qs.filter(assigned_mechanic_id=int(mechanic_id))
             except (ValueError, TypeError):
                 pass
+        status_filter = self.request.query_params.get("status")
+        if status_filter and status_filter.strip():
+            qs = qs.filter(status=status_filter.strip())
         return qs.order_by("-created_at")
 
     def perform_create(self, serializer):

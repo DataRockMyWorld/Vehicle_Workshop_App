@@ -2,9 +2,8 @@ import { useCallback, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { customers } from '../api/services'
 import { useAuth } from '../context/AuthContext'
-import { apiErrorMsg, toList } from '../api/client'
-import { usePagination } from '../hooks/usePagination'
-import { useAsyncData } from '../hooks/useAsyncData'
+import { apiErrorMsg } from '../api/client'
+import { usePaginatedList } from '../hooks/usePaginatedList'
 import Pagination from '../components/Pagination'
 import Loader from '../components/Loader'
 import PageError from '../components/PageError'
@@ -12,8 +11,10 @@ import './GenericListPage.css'
 
 export default function CustomersPage() {
   const { canWrite } = useAuth()
-  const { data: rawList, loading, error, refetch } = useAsyncData(() => customers.list(), [])
-  const list = toList(rawList ?? null)
+  const { items: list, count, loading, error, page, setPage, totalPages, pageSize, refetch } = usePaginatedList(
+    (p) => customers.list(p),
+    []
+  )
   const load = useCallback(() => refetch(), [refetch])
   const [formError, setFormError] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -23,8 +24,6 @@ export default function CustomersPage() {
   const [email, setEmail] = useState('')
   const [phone_number, setPhone_number] = useState('')
   const [receive_service_reminders, setReceive_service_reminders] = useState(true)
-
-  const { paginatedItems, currentPage, totalPages, pageSize, setPage, setPageSize } = usePagination(list, 10)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -158,6 +157,7 @@ export default function CustomersPage() {
         ) : list.length === 0 ? (
           <div className="empty">No customers yet. Use “Add customer” to create one.</div>
         ) : (
+          <>
           <table className="table">
             <thead>
               <tr>
@@ -182,6 +182,15 @@ export default function CustomersPage() {
               ))}
             </tbody>
           </table>
+          <Pagination
+            currentPage={page}
+            totalPages={totalPages}
+            totalItems={count}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            pageSizeOptions={[]}
+          />
+          </>
         )}
         </div>
       )}

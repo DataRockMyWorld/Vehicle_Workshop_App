@@ -330,6 +330,53 @@
   border-top: 2px solid var(--accent);
 }
 
+.invoice-card__preview {
+  display: inline-flex;
+  gap: 0.5rem;
+  margin-left: 0.5rem;
+}
+
+.invoice-card__preview-wrap {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: var(--bg-base);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.invoice-card__preview-actions {
+  margin-bottom: 1rem;
+}
+
+.invoice-card__preview-actions .btn {
+  margin-right: 0.5rem;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .receipt-print-area,
+  .receipt-print-area *,
+  .invoice-print-area,
+  .invoice-print-area * {
+    visibility: visible;
+  }
+
+  .receipt-print-area,
+  .invoice-print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+
+  .invoice-card__preview-actions {
+    display: none;
+  }
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .sr-detail__main {

@@ -1,11 +1,10 @@
 import { useCallback, useState } from 'react'
-import { invoices, reports, serviceRequests } from '../api/services'
-import { apiErrorMsg, toList } from '../api/client'
-import { usePagination } from '../hooks/usePagination'
-import { useAsyncData } from '../hooks/useAsyncData'
+import { invoices, reports } from '../api/services'
+import { apiErrorMsg } from '../api/client'
+import { usePaginatedList } from '../hooks/usePaginatedList'
 import Pagination from '../components/Pagination'
 import PageError from '../components/PageError'
-import type { Invoice, ServiceRequest } from '../types'
+import type { Invoice } from '../types'
 import Loader from '../components/Loader'
 import { formatCurrency } from '../utils/currency'
 import { useAuth } from '../context/AuthContext'
@@ -13,13 +12,10 @@ import './GenericListPage.css'
 
 export default function InvoicesPage() {
   const { canWrite } = useAuth()
-  const { data: rawData, loading, error, refetch } = useAsyncData(
-    () => Promise.all([invoices.list(), serviceRequests.list()]),
+  const { items: list, count, loading, error, page, setPage, totalPages, pageSize, refetch } = usePaginatedList<Invoice>(
+    (p) => invoices.list(p),
     []
   )
-  const [list, srs] = rawData
-    ? [toList(rawData[0]) as Invoice[], toList(rawData[1]) as ServiceRequest[]]
-    : [[], []]
   const load = useCallback(() => refetch(), [refetch])
 
   const [downloading, setDownloading] = useState<number | null>(null)
@@ -64,10 +60,7 @@ export default function InvoicesPage() {
     }
   }
 
-  const byId = Object.fromEntries(srs.map((x) => [x.id, x]))
-  const srLabel = (id: number) => (byId[id] ? `Service request #${id}` : `#${id}`)
-  const rows = list
-  const { paginatedItems, currentPage, totalPages, pageSize, setPage, setPageSize } = usePagination(rows, 10)
+  const srLabel = (id: number) => `#${id}`
   const PAYMENT_LABELS = { cash: 'Cash', momo: 'MoMo', pos: 'POS' }
 
   return (
@@ -95,7 +88,7 @@ export default function InvoicesPage() {
             {apiErrorMsg(markingError)}
           </div>
         )}
-        {loading ? <Loader label="Loading invoices…" /> : rows.length === 0 ? (
+        {loading ? <Loader label="Loading invoices…" /> : list.length === 0 ? (
           <div className="empty">No invoices yet.</div>
         ) : (
           <>
@@ -110,7 +103,7 @@ export default function InvoicesPage() {
               </tr>
             </thead>
             <tbody>
-              {paginatedItems.map((r) => (
+              {list.map((r) => (
                 <tr key={r.id}>
                   <td>{srLabel(r.service_request)}</td>
                   <td>{formatCurrency(r.total_cost)}</td>
@@ -153,13 +146,12 @@ export default function InvoicesPage() {
               </tbody>
             </table>
             <Pagination
-              currentPage={currentPage}
+              currentPage={page}
               totalPages={totalPages}
-              totalItems={rows.length}
+              totalItems={count}
               pageSize={pageSize}
               onPageChange={setPage}
-              onPageSizeChange={setPageSize}
-              pageSizeOptions={[10, 20, 50]}
+              pageSizeOptions={[]}
             />
           </>
         )}

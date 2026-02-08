@@ -4,7 +4,7 @@ import { serviceRequests, customers, vehicles, sites } from '../api/services'
 import { useAuth } from '../context/AuthContext'
 import { toList } from '../api/client'
 import { buildLookups } from '../utils/lookups'
-import { usePagination } from '../hooks/usePagination'
+import { usePaginatedList } from '../hooks/usePaginatedList'
 import { useAsyncData } from '../hooks/useAsyncData'
 import Pagination from '../components/Pagination'
 import PageError from '../components/PageError'
@@ -17,30 +17,25 @@ const STATUS_OPTIONS = ['', 'Pending', 'In Progress', 'Completed']
 export default function ServiceRequestsPage() {
   const navigate = useNavigate()
   const { canWrite } = useAuth()
-  const { data: rawData, loading, error, refetch } = useAsyncData(
-    () => Promise.all([serviceRequests.list(), customers.list(), vehicles.list(), sites.list()]),
+  const [statusFilter, setStatusFilter] = useState('')
+  const { items: list, count, loading, error, page, setPage, totalPages, pageSize, refetch } = usePaginatedList<ServiceRequest>(
+    (p) => serviceRequests.list({ page: p, status: statusFilter || undefined }),
+    [statusFilter]
+  )
+  const { data: lookupData } = useAsyncData(
+    () => Promise.all([customers.list(), vehicles.list(), sites.list()]),
     []
   )
-  const [requests, customersList, vehiclesList, sitesList] = rawData
+  const [customersList, vehiclesList, sitesList] = lookupData
     ? [
-        toList(rawData[0]) as ServiceRequest[],
-        toList(rawData[1]) as Customer[],
-        toList(rawData[2]) as Vehicle[],
-        toList(rawData[3]) as Site[],
+        toList(lookupData[0]) as Customer[],
+        toList(lookupData[1]) as Vehicle[],
+        toList(lookupData[2]) as Site[],
       ]
-    : [[], [], [], []]
+    : [[], [], []]
   const load = useCallback(() => refetch(), [refetch])
 
-  const [statusFilter, setStatusFilter] = useState('')
-
   const lk = useMemo(() => buildLookups(customersList, vehiclesList, sitesList), [customersList, vehiclesList, sitesList])
-  const list = requests
-  const filtered = useMemo(() => {
-    if (!statusFilter) return list
-    return list.filter((r) => r.status === statusFilter)
-  }, [list, statusFilter])
-
-  const { paginatedItems, currentPage, totalPages, pageSize, setPage, setPageSize } = usePagination(filtered, 10)
 
   return (
     <div className="service-requests">
@@ -79,9 +74,9 @@ export default function ServiceRequestsPage() {
       <div className="card table-wrap">
         {loading ? (
           <Loader label="Loading requests…" />
-        ) : filtered.length === 0 ? (
+        ) : list.length === 0 ? (
           <div className="empty">
-            {list.length === 0 ? 'No service requests yet.' : 'No requests match the filter.'}
+            {statusFilter ? 'No requests match the filter.' : 'No service requests yet.'}
           </div>
         ) : (
           <>
@@ -97,7 +92,7 @@ export default function ServiceRequestsPage() {
                 </tr>
               </thead>
               <tbody>
-                {paginatedItems.map((r) => (
+                {list.map((r) => (
                 <tr
                   key={r.id}
                   data-clickable
@@ -125,13 +120,12 @@ export default function ServiceRequestsPage() {
               </tbody>
             </table>
             <Pagination
-              currentPage={currentPage}
+              currentPage={page}
               totalPages={totalPages}
-              totalItems={filtered.length}
+              totalItems={count}
               pageSize={pageSize}
               onPageChange={setPage}
-              onPageSizeChange={setPageSize}
-              pageSizeOptions={[10, 20, 50]}
+              pageSizeOptions={[]}
             />
           </>
         )}

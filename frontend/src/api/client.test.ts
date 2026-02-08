@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { apiErrorMsg, toList } from './client'
+import { apiErrorMsg, toList, toPaginated } from './client'
 
 describe('apiErrorMsg', () => {
   it('returns fallback for null/undefined', () => {
@@ -62,5 +62,22 @@ describe('toList', () => {
 
   it('returns empty array for non-array non-paginated input', () => {
     expect(toList({ foo: 'bar' })).toEqual([])
+  })
+})
+
+describe('toPaginated', () => {
+  it('returns results and count from paginated response', () => {
+    const data = { results: [{ id: 1 }], count: 10 }
+    expect(toPaginated(data)).toEqual({ results: [{ id: 1 }], count: 10 })
+  })
+
+  it('treats raw array as single page', () => {
+    const arr = [1, 2, 3]
+    expect(toPaginated(arr)).toEqual({ results: [1, 2, 3], count: 3 })
+  })
+
+  it('returns empty for null/undefined', () => {
+    expect(toPaginated(null)).toEqual({ results: [], count: 0 })
+    expect(toPaginated(undefined)).toEqual({ results: [], count: 0 })
   })
 })

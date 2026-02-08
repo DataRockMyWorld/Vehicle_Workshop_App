@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { vehicles, customers, sites } from '../api/services'
 import { useAuth } from '../context/AuthContext'
 import { apiErrorMsg, toList } from '../api/client'
-import { usePagination } from '../hooks/usePagination'
+import { usePaginatedList } from '../hooks/usePaginatedList'
 import { useAsyncData } from '../hooks/useAsyncData'
 import Pagination from '../components/Pagination'
 import Loader from '../components/Loader'
@@ -13,13 +13,17 @@ import './GenericListPage.css'
 
 export default function VehiclesPage() {
   const { canWrite, siteId } = useAuth()
-  const { data: rawData, loading, error, refetch } = useAsyncData(
-    () => Promise.all([vehicles.list(), customers.list(), sites.list()]),
+  const { items: list, count, loading, error, page, setPage, totalPages, pageSize, refetch } = usePaginatedList(
+    (p) => vehicles.list(p),
     []
   )
-  const [list, cust, sitesList] = rawData
-    ? [toList(rawData[0]), toList(rawData[1]), toList(rawData[2])]
-    : [[], [], []]
+  const { data: lookupData } = useAsyncData(
+    () => Promise.all([customers.list(), sites.list()]),
+    []
+  )
+  const [cust, sitesList] = lookupData
+    ? [toList(lookupData[0]), toList(lookupData[1])]
+    : [[], []]
   const load = useCallback(() => refetch(), [refetch])
   const [formError, setFormError] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -34,8 +38,6 @@ export default function VehiclesPage() {
   useEffect(() => {
     if (siteId) setSite(String(siteId))
   }, [siteId])
-
-  const { paginatedItems, currentPage, totalPages, pageSize, setPage, setPageSize } = usePagination(list, 10)
 
   const byId = (arr, id) => (arr || []).find((x) => x.id === parseInt(id, 10))
   const name = (id) => {
@@ -294,7 +296,7 @@ export default function VehiclesPage() {
                 </tr>
               </thead>
               <tbody>
-                {paginatedItems.map((r) => (
+                {list.map((r) => (
                   <tr key={r.id}>
                     <td>
                       <Link to={`/vehicles/${r.id}`} className="history-link">
@@ -316,13 +318,12 @@ export default function VehiclesPage() {
               </tbody>
             </table>
             <Pagination
-              currentPage={currentPage}
+              currentPage={page}
               totalPages={totalPages}
-              totalItems={list.length}
+              totalItems={count}
               pageSize={pageSize}
               onPageChange={setPage}
-              onPageSizeChange={setPageSize}
-              pageSizeOptions={[10, 20, 50]}
+              pageSizeOptions={[]}
             />
           </>
         )}

@@ -15,6 +15,7 @@ const nav = [
   { to: '/products', label: 'Products', end: false },
   { to: '/inventory', label: 'Inventory', end: false },
   { to: '/invoices', label: 'Invoices', end: false },
+  { to: '/reports/sales', label: 'Sales report', end: false },
   { to: '/audit', label: 'Audit trail', end: false },
 ]
 

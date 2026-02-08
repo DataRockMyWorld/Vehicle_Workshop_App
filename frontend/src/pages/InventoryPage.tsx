@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useState, useMemo } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { inventory, products, sites } from '../api/services'
 import { useAuth } from '../context/AuthContext'
 import { apiErrorMsg, toList } from '../api/client'
-import { usePagination } from '../hooks/usePagination'
+import { usePaginatedList } from '../hooks/usePaginatedList'
 import { useAsyncData } from '../hooks/useAsyncData'
 import Pagination from '../components/Pagination'
 import ProductSearch from '../components/ProductSearch'
@@ -30,20 +30,27 @@ const CATEGORY_LABELS = {
 
 export default function InventoryPage() {
   const { canWrite, siteId: userSiteId } = useAuth()
-  const { data: rawData, loading, error, refetch } = useAsyncData(
-    () => Promise.all([inventory.list(), products.list(), sites.list()]),
+  const [siteFilter, setSiteFilter] = useState('')
+  const [lowStockOnly, setLowStockOnly] = useState(false)
+
+  const { items: list, count, loading, error, page, setPage, totalPages, pageSize, refetch } = usePaginatedList<InventoryItem>(
+    (p) => inventory.list({ page: p, site_id: siteFilter || undefined, low_stock: lowStockOnly || undefined }),
+    [siteFilter, lowStockOnly]
+  )
+
+  const { data: lookupData } = useAsyncData(
+    () => Promise.all([products.list(), sites.list()]),
     []
   )
-  const [list, prods, sitesList] = rawData
-    ? [toList(rawData[0]) as InventoryItem[], toList(rawData[1]) as Product[], toList(rawData[2]) as Site[]]
-    : [[], [], []]
+  const [prods, sitesList] = lookupData
+    ? [toList(lookupData[0]) as Product[], toList(lookupData[1]) as Site[]]
+    : [[], []]
+
   const load = useCallback(() => refetch(), [refetch])
 
   const [formError, setFormError] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [showForm, setShowForm] = useState(false)
-  const [siteFilter, setSiteFilter] = useState(userSiteId ? String(userSiteId) : '')
-  const [lowStockOnly, setLowStockOnly] = useState(false)
   const [productId, setProductId] = useState('')
   const [siteId, setSiteId] = useState(userSiteId ? String(userSiteId) : '')
   const [quantity_on_hand, setQuantity_on_hand] = useState('')
@@ -63,21 +70,6 @@ export default function InventoryPage() {
   const productCategory = (id: number) => (CATEGORY_LABELS as Record<string, string>)[byId(prods, id)?.category ?? ''] || byId(prods, id)?.category || '—'
   const productUnit = (id: number) => byId(prods, id)?.unit_of_measure ?? 'each'
   const siteName = (id: number) => (byId(sitesList, id)?.name ?? `#${id}`)
-
-  const filtered = useMemo(() => {
-    let rows = list
-    if (siteFilter) rows = rows.filter((r) => String(r.site) === String(siteFilter))
-    if (lowStockOnly) {
-      rows = rows.filter((r) => {
-        const level = r.reorder_level ?? 0
-        const onHand = r.quantity_on_hand ?? 0
-        return level > 0 && onHand <= level
-      })
-    }
-    return rows
-  }, [list, siteFilter, lowStockOnly])
-
-  const { paginatedItems, currentPage, totalPages, pageSize, setPage, setPageSize } = usePagination(filtered, 10)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -258,9 +250,9 @@ export default function InventoryPage() {
       <div className="card table-wrap">
         {loading ? (
           <div className="empty">Loading…</div>
-        ) : filtered.length === 0 ? (
+        ) : list.length === 0 ? (
           <div className="empty">
-            {toList(list).length === 0 ? 'No inventory yet. Use “Add inventory” to create a record.' : 'No records match the filters.'}
+            {!(siteFilter || lowStockOnly) ? 'No inventory yet. Use “Add inventory” to create a record.' : 'No records match the filters.'}
           </div>
         ) : (
           <>
@@ -279,7 +271,7 @@ export default function InventoryPage() {
                 </tr>
               </thead>
               <tbody>
-                {paginatedItems.map((r) => {
+                {list.map((r) => {
                 const onHand = r.quantity_on_hand ?? 0
                 const reserved = r.quantity_reserved ?? 0
                 const available = Math.max(0, onHand - reserved)
@@ -312,13 +304,12 @@ export default function InventoryPage() {
               </tbody>
             </table>
             <Pagination
-              currentPage={currentPage}
+              currentPage={page}
               totalPages={totalPages}
-              totalItems={filtered.length}
+              totalItems={count}
               pageSize={pageSize}
               onPageChange={setPage}
-              onPageSizeChange={setPageSize}
-              pageSizeOptions={[10, 20, 50]}
+              pageSizeOptions={[]}
             />
           </>
         )}

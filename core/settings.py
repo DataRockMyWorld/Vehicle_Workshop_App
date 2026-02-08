@@ -44,6 +44,15 @@ TWILIO_PHONE_NUMBER = env("TWILIO_PHONE_NUMBER", default="")
 # Set USE_TWILIO_SMS=True and Twilio creds to send real SMS.
 USE_TWILIO_SMS = env.bool("USE_TWILIO_SMS", default=False)
 
+# Feeling Autopart – Business config for receipts and invoices
+FEELING_AUTOPART = {
+    "BUSINESS_NAME": env("FEELING_AUTOPART_NAME", default="Feeling Autopart"),
+    "TIN": env("FEELING_AUTOPART_TIN", default=""),
+    "VAT_RATE": float(env("FEELING_AUTOPART_VAT_RATE", default="0")),
+    "WEBSITE": env("FEELING_AUTOPART_WEBSITE", default=""),
+    "SUPPORT_EMAIL": env("FEELING_AUTOPART_EMAIL", default=""),
+}
+
 INSTALLED_APPS = [
     "jazzmin",
     "django.contrib.admin",

@@ -22,6 +22,7 @@ import InventoryPage from './pages/InventoryPage'
 import InvoicesPage from './pages/InvoicesPage'
 import AppointmentsPage from './pages/AppointmentsPage'
 import AuditTrailPage from './pages/AuditTrailPage'
+import SalesReportPage from './pages/SalesReportPage'
 import type { ReactNode } from 'react'
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
@@ -61,6 +62,7 @@ export default function App() {
           <Route path="products" element={<ProductsPage />} />
           <Route path="inventory" element={<InventoryPage />} />
           <Route path="invoices" element={<InvoicesPage />} />
+          <Route path="reports/sales" element={<SalesReportPage />} />
           <Route path="appointments" element={<AppointmentsPage />} />
           <Route path="audit" element={<AuditTrailPage />} />
         </Route>

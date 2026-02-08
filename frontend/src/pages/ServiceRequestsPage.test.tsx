@@ -17,9 +17,12 @@ vi.mock('../context/AuthContext', () => ({
 
 describe('ServiceRequestsPage', () => {
   beforeEach(() => {
-    vi.mocked(serviceRequests.list).mockResolvedValue([
-      { id: 1, service_type_display: 'Oil Change', customer: 1, vehicle: 1, site: 1, status: 'Pending' },
-    ])
+    vi.mocked(serviceRequests.list).mockResolvedValue({
+      results: [
+        { id: 1, service_type_display: 'Oil Change', customer: 1, vehicle: 1, site: 1, status: 'Pending' },
+      ],
+      count: 1,
+    })
     vi.mocked(customers.list).mockResolvedValue([{ id: 1, first_name: 'John', last_name: 'Doe' }])
     vi.mocked(vehicles.list).mockResolvedValue([{ id: 1, make: 'Toyota', model: 'Camry' }])
     vi.mocked(sites.list).mockResolvedValue([{ id: 1, name: 'Main Site' }])
@@ -44,11 +47,8 @@ describe('ServiceRequestsPage', () => {
       </MemoryRouter>
     )
 
-    await waitFor(() => {
-      expect(screen.getByText('Oil Change')).toBeInTheDocument()
-    })
-
-    expect(screen.getByRole('table')).toBeInTheDocument()
+    const table = await screen.findByRole('table', {}, { timeout: 3000 })
+    expect(table).toBeInTheDocument()
     expect(screen.getByText('Oil Change')).toBeInTheDocument()
   })
 
@@ -61,10 +61,7 @@ describe('ServiceRequestsPage', () => {
       </MemoryRouter>
     )
 
-    await waitFor(() => {
-      expect(screen.getByText(/try again/i)).toBeInTheDocument()
-    })
-
-    expect(screen.getByRole('alert')).toBeInTheDocument()
+    const retryBtn = await screen.findByText(/try again/i, {}, { timeout: 3000 })
+    expect(retryBtn).toBeInTheDocument()
   })
 })

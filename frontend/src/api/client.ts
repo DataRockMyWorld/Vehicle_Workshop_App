@@ -82,6 +82,20 @@ export function toList(x: unknown): unknown[] {
   return []
 }
 
+/** Extract paginated response: { results, count, next, previous }. Handles raw arrays as single page. */
+export function toPaginated<T = unknown>(x: unknown): { results: T[]; count: number } {
+  if (Array.isArray(x)) {
+    return { results: x as T[], count: x.length }
+  }
+  if (x && typeof x === 'object' && 'results' in x) {
+    const o = x as { results?: unknown[]; count?: number }
+    const results = Array.isArray(o.results) ? (o.results as T[]) : []
+    const count = typeof o.count === 'number' ? o.count : results.length
+    return { results, count }
+  }
+  return { results: [], count: 0 }
+}
+
 /** Normalize API error for display. Handles Error, detail string/array, field errors, status codes. */
 export function apiErrorMsg(err: unknown): string {
   if (!err) return 'Something went wrong.'
