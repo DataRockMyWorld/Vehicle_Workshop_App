@@ -37,12 +37,14 @@ class Command(BaseCommand):
                 last_name="Test",
                 is_superuser=True,
                 is_staff=True,
+                is_active=True,
             )
             created = True
         user.set_password(password)
         user.is_superuser = True
         user.is_staff = True
-        user.save(update_fields=["password", "is_superuser", "is_staff"])
+        user.is_active = True
+        user.save(update_fields=["password", "is_superuser", "is_staff", "is_active"])
 
         if created:
             self.stdout.write(self.style.SUCCESS(f"Created E2E user: {email}"))

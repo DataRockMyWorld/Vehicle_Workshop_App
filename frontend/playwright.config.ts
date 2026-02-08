@@ -18,7 +18,19 @@ export default defineConfig({
     baseURL: 'http://localhost:5173',
     trace: 'on-first-retry',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    { name: 'setup', testMatch: /auth\.setup\.ts/ },
+    { name: 'auth', use: { ...devices['Desktop Chrome'] }, testMatch: /auth\.spec\.ts/ },
+    {
+      name: 'chromium',
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: 'playwright/.auth/user.json',
+      },
+      dependencies: ['setup'],
+      testIgnore: [/auth\.spec\.ts/],
+    },
+  ],
   webServer: {
     command: 'npm run dev',
     url: 'http://localhost:5173',
