@@ -67,9 +67,23 @@ List and detail views use `select_related()` and `prefetch_related()` to avoid N
 | ProductUsage | `select_related("service_request", "product")` |
 | ServiceCategory | `prefetch_related("service_types")` |
 
+## Pagination
+
+All list endpoints use page-based pagination (25 items per page). Response format:
+
+```json
+{
+  "count": 123,
+  "next": "http://.../api/v1/customers/?page=2",
+  "previous": null,
+  "results": [...]
+}
+```
+
+Query params: `?page=2` for page 2. The frontend `toList()` helper extracts `results` from both raw arrays and paginated responses.
+
 ## Future Improvements
 
 1. **URL consistency**: Gradually migrate `mechanic/` → `mechanics/`, `vehicle/` → `vehicles/`, `service_request/` → `service-requests/` with proper deprecation and frontend updates.
-2. **Pagination**: Add cursor or page-based pagination for large lists (customers, service requests, inventory).
-3. **Filtering**: Standardize query params (e.g. `?status=Pending&site_id=1`) across list endpoints.
-4. **Nested writes**: Support creating product usage via `POST /service-requests/:id/product-usage/`.
+2. **Filtering**: Standardize query params (e.g. `?status=Pending&site_id=1`) across list endpoints.
+3. **Nested writes**: Support creating product usage via `POST /service-requests/:id/product-usage/`.

@@ -27,12 +27,13 @@ export const serviceCategories = {
 }
 
 export const serviceRequests = {
-  list: (params: { customer_id?: number; vehicle_id?: number; mechanic_id?: number; parts_only?: boolean } = {}) => {
+  list: (params: { customer_id?: number; vehicle_id?: number; mechanic_id?: number; parts_only?: boolean; page?: number } = {}) => {
     const sp = buildApiParams({
       customer_id: params.customer_id,
       vehicle_id: params.vehicle_id,
       mechanic_id: params.mechanic_id,
       parts_only: params.parts_only ? true : undefined,
+      page: params.page,
     })
     return api(withParams('service_request/', sp))
   },
@@ -48,7 +49,7 @@ export const serviceRequests = {
 }
 
 export const customers = {
-  list: () => api('customers/'),
+  list: (page?: number) => api(page ? `customers/?page=${page}` : 'customers/'),
   get: (id: number | string) => api(`customers/${id}/`),
   create: (body: Record<string, unknown>) => api('customers/', { method: 'POST', body: JSON.stringify(body) }),
   update: (id: number | string, body: Record<string, unknown>) => api(`customers/${id}/`, { method: 'PATCH', body: JSON.stringify(body) }),
@@ -57,7 +58,7 @@ export const customers = {
 }
 
 export const vehicles = {
-  list: () => api('vehicle/'),
+  list: (page?: number) => api(page ? `vehicle/?page=${page}` : 'vehicle/'),
   get: (id: number | string) => api(`vehicle/${id}/`),
   create: (body: Record<string, unknown>) => api('vehicle/', { method: 'POST', body: JSON.stringify(body) }),
   update: (id: number | string, body: Record<string, unknown>) => api(`vehicle/${id}/`, { method: 'PATCH', body: JSON.stringify(body) }),
@@ -65,7 +66,7 @@ export const vehicles = {
 }
 
 export const mechanics = {
-  list: () => api('mechanic/'),
+  list: (page?: number) => api(page ? `mechanic/?page=${page}` : 'mechanic/'),
   get: (id: number | string) => api(`mechanic/${id}/`),
   create: (body: Record<string, unknown>) => api('mechanic/', { method: 'POST', body: JSON.stringify(body) }),
   update: (id: number | string, body: Record<string, unknown>) => api(`mechanic/${id}/`, { method: 'PATCH', body: JSON.stringify(body) }),
@@ -73,7 +74,7 @@ export const mechanics = {
 }
 
 export const sites = {
-  list: () => api('sites/'),
+  list: (page?: number) => api(page ? `sites/?page=${page}` : 'sites/'),
   get: (id: number | string) => api(`sites/${id}/`),
   create: (body: Record<string, unknown>) => api('sites/', { method: 'POST', body: JSON.stringify(body) }),
   update: (id: number | string, body: Record<string, unknown>) => api(`sites/${id}/`, { method: 'PATCH', body: JSON.stringify(body) }),
@@ -81,7 +82,7 @@ export const sites = {
 }
 
 export const products = {
-  list: () => api('products/'),
+  list: (page?: number) => api(page ? `products/?page=${page}` : 'products/'),
   search: (q: string, limit = 15, { vehicle = '', siteId = '' }: { vehicle?: string; siteId?: string } = {}) => {
     const params = new URLSearchParams({ q: q || '', limit: String(limit) })
     if (vehicle) params.set('vehicle', vehicle)
@@ -100,7 +101,7 @@ export const products = {
 }
 
 export const appointments = {
-  list: () => api('appointments/'),
+  list: (page?: number) => api(page ? `appointments/?page=${page}` : 'appointments/'),
   get: (id: number | string) => api(`appointments/${id}/`),
   create: (body: Record<string, unknown>) => api('appointments/', { method: 'POST', body: JSON.stringify(body) }),
   update: (id: number | string, body: Record<string, unknown>) => api(`appointments/${id}/`, { method: 'PATCH', body: JSON.stringify(body) }),
@@ -110,7 +111,7 @@ export const appointments = {
 }
 
 export const inventory = {
-  list: () => api('inventory/'),
+  list: (page?: number) => api(page ? `inventory/?page=${page}` : 'inventory/'),
   lowStock: () => api('inventory/low-stock/'),
   get: (id: number | string) => api(`inventory/${id}/`),
   create: (body: Record<string, unknown>) => api('inventory/', { method: 'POST', body: JSON.stringify(body) }),
@@ -119,7 +120,7 @@ export const inventory = {
 }
 
 export const invoices = {
-  list: () => api('invoices/'),
+  list: (page?: number) => api(page ? `invoices/?page=${page}` : 'invoices/'),
   get: (id: number | string) => api(`invoices/${id}/`),
   update: (id: number | string, body: Record<string, unknown>) => api(`invoices/${id}/`, { method: 'PATCH', body: JSON.stringify(body) }),
   downloadPdf: (id: number | string) => apiDownload(`invoices/${id}/pdf/`, `invoice-${id}.pdf`),

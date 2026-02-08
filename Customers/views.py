@@ -36,7 +36,7 @@ class WalkinCustomerView(APIView):
 
 
 class CustomerListCreateView(generics.ListCreateAPIView):
-    queryset = Customer.objects.all()
+    queryset = Customer.objects.all().order_by("-id")
     serializer_class = CustomerSerializer
     permission_classes = [IsAuthenticated, IsReadOnlyForHQ]
 

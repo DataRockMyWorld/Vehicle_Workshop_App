@@ -217,7 +217,7 @@ def _invoice_queryset(user):
         "service_request__customer",
         "service_request__vehicle",
         "service_request__site",
-    ).all()
+    ).all().order_by("-created_at")
     sid = user_site_id(user)
     if sid is not None:
         qs = qs.filter(service_request__site_id=sid)

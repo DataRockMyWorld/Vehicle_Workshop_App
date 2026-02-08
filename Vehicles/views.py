@@ -12,7 +12,8 @@ class VehicleListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated, IsReadOnlyForHQ]
 
     def get_queryset(self):
-        return filter_queryset_by_site(super().get_queryset(), self.request.user)
+        qs = filter_queryset_by_site(super().get_queryset(), self.request.user)
+        return qs.order_by("-id")
 
     def perform_create(self, serializer):
         user = self.request.user
