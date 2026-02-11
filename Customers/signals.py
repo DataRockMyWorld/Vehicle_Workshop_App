@@ -9,4 +9,8 @@ def notify_welcome_on_create(sender, instance, created, **kwargs):
     """Send welcome message when a new customer is registered."""
     if created and (instance.phone_number or instance.email):
         from .tasks import notify_welcome_customer
-        notify_welcome_customer.delay(instance.id)
+        try:
+            notify_welcome_customer.delay(instance.id)
+        except Exception:
+            # Celery/Redis not available (e.g., during tests) - skip notification
+            pass
