@@ -1,7 +1,8 @@
 .product-search {
   position: relative;
   flex: 1;
-  min-width: 200px;
+  min-width: 320px;
+  max-width: 100%;
 }
 
 .product-search__input-wrap {

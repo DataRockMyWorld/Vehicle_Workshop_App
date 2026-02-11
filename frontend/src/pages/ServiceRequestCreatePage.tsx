@@ -37,7 +37,12 @@ export default function ServiceRequestCreatePage() {
     : []
 
   useEffect(() => {
-    Promise.all([customers.list(), vehicles.list(), sites.list(), serviceCategories.list()])
+    Promise.all([
+      customers.list(undefined, 500),
+      vehicles.list(undefined, 500),
+      sites.list(undefined, 500),
+      serviceCategories.list(),
+    ])
       .then(([c, v, s, cats]) => {
         setCustomersList(toList(c))
         setVehiclesList(toList(v))
@@ -66,7 +71,10 @@ export default function ServiceRequestCreatePage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!customerId || !vehicleId || !siteId || !status || !description.trim()) return
+    if (!customerId || !vehicleId || !siteId || !status || !description.trim()) {
+      setError('Please fill in all required fields: customer, vehicle, site, status, and description.')
+      return
+    }
     setError(null)
     setSubmitting(true)
     try {

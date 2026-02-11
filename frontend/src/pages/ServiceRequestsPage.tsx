@@ -16,7 +16,7 @@ const STATUS_OPTIONS = ['', 'Pending', 'In Progress', 'Completed']
 
 export default function ServiceRequestsPage() {
   const navigate = useNavigate()
-  const { canWrite } = useAuth()
+  const { canWrite, canSeeAllSites } = useAuth()
   const [statusFilter, setStatusFilter] = useState('')
   const { items: list, count, loading, error, page, setPage, totalPages, pageSize, refetch } = usePaginatedList<ServiceRequest>(
     (p) => serviceRequests.list({ page: p, status: statusFilter || undefined }),
@@ -87,7 +87,7 @@ export default function ServiceRequestsPage() {
                   <th>Service type</th>
                   <th>Customer</th>
                   <th>Vehicle</th>
-                  <th>Site</th>
+                  {canSeeAllSites && <th>Site</th>}
                   <th>Status</th>
                 </tr>
               </thead>
@@ -103,13 +103,13 @@ export default function ServiceRequestsPage() {
                 >
                   <td>
                     <Link to={`/service-requests/${r.id}`} className="sr-link" onClick={(e) => e.stopPropagation()}>
-                      #{r.id}
+                      {(r as { display_number?: string }).display_number ?? `#${r.id}`}
                     </Link>
                   </td>
                   <td>{r.service_type_display || '—'}</td>
                   <td>{lk.customer(r.customer)}</td>
                   <td>{lk.vehicle(r.vehicle ?? null)}</td>
-                  <td>{lk.site(r.site)}</td>
+                  {canSeeAllSites && <td>{lk.site(r.site)}</td>}
                   <td>
                     <span className={`badge badge--${(r.status || '').toLowerCase().replace(' ', '-')}`}>
                       {r.status || '—'}

@@ -12,7 +12,7 @@ function buildLookups(customers, vehicles, sites) {
   const s = byId(sites)
   return {
     customer: (id) => (c[id] ? `${c[id].first_name} ${c[id].last_name}` : `#${id}`),
-    vehicle: (id) => (!id ? 'Parts sale' : v[id] ? `${v[id].make} ${v[id].model} (${v[id].license_plate})` : `#${id}`),
+    vehicle: (id) => (!id ? 'Sales' : v[id] ? `${v[id].make} ${v[id].model} (${v[id].license_plate})` : `#${id}`),
     site: (id) => (s[id] ? s[id].name : `#${id}`),
   }
 }
@@ -152,7 +152,7 @@ export default function MechanicDetailPage() {
                         <span className={`badge badge--${(sr.status || '').toLowerCase().replace(' ', '-')}`}>
                           {sr.status}
                         </span>
-                        <span className="mechanic-detail__sr-id"> #{sr.id}</span>
+                        <span className="mechanic-detail__sr-id"> {(sr as { display_number?: string }).display_number ?? `#${sr.id}`}</span>
                       </Link>
                     </td>
                   </tr>

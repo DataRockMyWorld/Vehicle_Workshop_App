@@ -21,8 +21,8 @@ export interface ReceiptProps {
   phone?: string
   website?: string
   tin?: string
-  receiptNumber: number
-  invoiceNumber: number
+  receiptNumber: number | string
+  invoiceNumber: number | string
   dateTime: string
   cashier?: string
   terminalId?: string
@@ -87,8 +87,8 @@ export default function Receipt({
       <div className="receipt__divider" />
 
       <section className="receipt__meta">
-        <p className="receipt__title">RECEIPT #{receiptNumber}</p>
-        <p className="receipt__line">Invoice #{invoiceNumber} | {dateTime}</p>
+        <p className="receipt__title">RECEIPT {typeof receiptNumber === 'string' && receiptNumber.startsWith('INV-') ? receiptNumber : `#${receiptNumber}`}</p>
+        <p className="receipt__line">Invoice {typeof invoiceNumber === 'string' && invoiceNumber.startsWith('INV-') ? invoiceNumber : `#${invoiceNumber}`} | {dateTime}</p>
         <p className="receipt__line">Cashier: {cashier} | POS: {terminalId}</p>
       </section>
 
@@ -173,7 +173,7 @@ export default function Receipt({
         <p className="receipt__disclaimer">
           Electrical parts not returnable after installation. Keep this receipt for warranty claims.
         </p>
-        <p className="receipt__verify">Verify: Invoice #{invoiceNumber}</p>
+        <p className="receipt__verify">Verify: Invoice {typeof invoiceNumber === 'string' && invoiceNumber.startsWith('INV-') ? invoiceNumber : `#${invoiceNumber}`}</p>
         <p className="receipt__compliance">Tax compliance: This is your proof of purchase.</p>
       </footer>
     </div>

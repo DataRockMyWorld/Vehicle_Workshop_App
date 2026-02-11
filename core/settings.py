@@ -42,7 +42,11 @@ TWILIO_AUTH_TOKEN = env("TWILIO_AUTH_TOKEN", default="")
 TWILIO_PHONE_NUMBER = env("TWILIO_PHONE_NUMBER", default="")
 # When False (default): log SMS to console so you can confirm flows in dev.
 # Set USE_TWILIO_SMS=True and Twilio creds to send real SMS.
-USE_TWILIO_SMS = env.bool("USE_TWILIO_SMS", default=False)
+USE_TWILIO_SMS = env.bool("USE_TWILIO_SMS", default=True)
+
+# Base URL for links in notifications (invoice PDF, receipt). No trailing slash.
+# Example: https://api.feelingautopart.com or http://localhost:8000
+APP_BASE_URL = env("APP_BASE_URL", default="http://localhost:8000").rstrip("/")
 
 # Feeling Autopart – Business config for receipts and invoices
 FEELING_AUTOPART = {
@@ -51,9 +55,14 @@ FEELING_AUTOPART = {
     "VAT_RATE": float(env("FEELING_AUTOPART_VAT_RATE", default="0")),
     "WEBSITE": env("FEELING_AUTOPART_WEBSITE", default=""),
     "SUPPORT_EMAIL": env("FEELING_AUTOPART_EMAIL", default=""),
+    # Path to company logo image for invoices (PNG/JPG). Placed at top of A4 invoice.
+    "LOGO_PATH": env("FEELING_AUTOPART_LOGO", default=""),
+    # Bank / MoMo details shown on invoices. Example: "MoMo: 0241234567 | Bank: GCB 1234567890"
+    "BANK_DETAILS": env("FEELING_AUTOPART_BANK_DETAILS", default=""),
 }
 
 INSTALLED_APPS = [
+    "common.apps.CommonConfig",
     "jazzmin",
     "django.contrib.admin",
     "django.contrib.auth",
@@ -112,7 +121,7 @@ REST_FRAMEWORK = {
         "rest_framework.permissions.IsAuthenticated",
     ),
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
-    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "DEFAULT_PAGINATION_CLASS": "core.pagination.PageSizePagination",
     "PAGE_SIZE": 25,
     "DEFAULT_THROTTLE_RATES": {
         "anon": "100/hour",
@@ -151,6 +160,9 @@ USE_TZ = True
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = "accounts.CustomUser"

@@ -70,6 +70,7 @@ export interface ServiceRequest {
 
 export interface Appointment {
   id: number
+  display_number?: string
   customer?: number
   vehicle?: number
   site?: number

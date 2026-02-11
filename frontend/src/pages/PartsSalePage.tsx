@@ -6,36 +6,54 @@ import { apiErrorMsg, toList } from '../api/client'
 import { buildLookups } from '../utils/lookups'
 import { usePagination } from '../hooks/usePagination'
 import Pagination from '../components/Pagination'
+import QuickSaleModal from '../components/QuickSaleModal'
 import type { Customer, Vehicle, Site, ServiceRequest } from '../types'
 import Loader from '../components/Loader'
 import './PartsSalePage.css'
 
-const STATUS_OPTIONS = ['', 'Pending', 'In Progress', 'Completed']
+const STATUS_OPTIONS = ['', 'Draft', 'Pending', 'In Progress', 'Completed']
 
 export default function PartsSalePage() {
   const navigate = useNavigate()
-  const { canWrite } = useAuth()
+  const { canWrite, canSeeAllSites, siteId: userSiteId } = useAuth()
   const [requests, setRequests] = useState<ServiceRequest[]>([])
   const [customersList, setCustomersList] = useState<Customer[]>([])
+  const [walkinCustomer, setWalkinCustomer] = useState<{ id: number } | null>(null)
   const [sitesList, setSitesList] = useState<Site[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<unknown>(null)
   const [statusFilter, setStatusFilter] = useState('')
+  const [showQuickSale, setShowQuickSale] = useState(false)
 
   useEffect(() => {
     Promise.all([
       serviceRequests.list({ parts_only: true }),
       customers.list(),
+      customers.walkin(),
       sites.list(),
     ])
-      .then(([r, c, s]) => {
+      .then(([r, c, walkin, s]) => {
         setRequests(toList(r) as ServiceRequest[])
         setCustomersList(toList(c) as Customer[])
+        setWalkinCustomer(walkin as { id: number })
         setSitesList(toList(s) as Site[])
       })
       .catch(setError)
       .finally(() => setLoading(false))
   }, [])
+
+  useEffect(() => {
+    // Keyboard shortcut for quick sale (Ctrl+N)
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.key === 'n' && canWrite && walkinCustomer) {
+        e.preventDefault()
+        setShowQuickSale(true)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [canWrite, walkinCustomer])
 
   const lk = useMemo(() => buildLookups(customersList, [] as Vehicle[], sitesList), [customersList, sitesList])
   const list = requests
@@ -50,7 +68,7 @@ export default function PartsSalePage() {
     return (
       <div className="parts-sale">
         <div className="page-header">
-          <h1 className="page-title">Parts sales</h1>
+          <h1 className="page-title">Sales</h1>
         </div>
         <div className="card" style={{ padding: '1.5rem' }}>
           <p style={{ color: 'var(--error)', margin: 0 }}>{apiErrorMsg(error)}</p>
@@ -62,13 +80,32 @@ export default function PartsSalePage() {
   return (
     <div className="parts-sale">
       <div className="page-header">
-        <h1 className="page-title">Parts sales</h1>
+        <h1 className="page-title">Sales</h1>
         {canWrite && (
-          <Link to="/parts-sale/new" className="btn btn--primary">
-            New sale
-          </Link>
+          <div className="page-header__actions">
+            <button
+              className="btn btn--success"
+              onClick={() => setShowQuickSale(true)}
+              disabled={!walkinCustomer || !userSiteId}
+              title="Quick sale for walk-in customer (Ctrl+N)"
+            >
+              ⚡ Quick Sale
+            </button>
+            <Link to="/parts-sale/new" className="btn btn--primary">
+              New sale
+            </Link>
+          </div>
         )}
       </div>
+
+      {showQuickSale && walkinCustomer && userSiteId && (
+        <QuickSaleModal
+          isOpen={showQuickSale}
+          onClose={() => setShowQuickSale(false)}
+          walkinCustomerId={walkinCustomer.id}
+          siteId={userSiteId}
+        />
+      )}
 
       <div className="parts-sale__bar">
         <label className="parts-sale__filter">
@@ -88,10 +125,10 @@ export default function PartsSalePage() {
 
       <div className="card table-wrap">
         {loading ? (
-          <Loader label="Loading parts sales…" />
+          <Loader label="Loading sales…" />
         ) : filtered.length === 0 ? (
           <div className="empty">
-            {list.length === 0 ? 'No parts sales yet. Use “New sale” to start one.' : 'No sales match the filter.'}
+            {list.length === 0 ? 'No sales yet. Use “New sale” to start one.' : 'No sales match the filter.'}
           </div>
         ) : (
           <>
@@ -100,7 +137,7 @@ export default function PartsSalePage() {
                 <tr>
                   <th>Sale #</th>
                   <th>Customer</th>
-                  <th>Site</th>
+                  {canSeeAllSites && <th>Site</th>}
                   <th>Status</th>
                 </tr>
               </thead>
@@ -116,11 +153,11 @@ export default function PartsSalePage() {
                   >
                     <td>
                       <Link to={`/service-requests/${r.id}`} className="parts-sale__link" onClick={(e) => e.stopPropagation()}>
-                        #{r.id}
+                        {(r as { display_number?: string }).display_number ?? `#${r.id}`}
                       </Link>
                     </td>
                     <td>{lk.customer(r.customer)}</td>
-                    <td>{lk.site(r.site)}</td>
+                    {canSeeAllSites && <td>{lk.site(r.site)}</td>}
                     <td>
                       <span className={`badge badge--${(r.status || '').toLowerCase().replace(' ', '-')}`}>
                         {r.status || '—'}

@@ -4,6 +4,12 @@ from .models import Product
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
+    fieldsets = (
+        (None, {"fields": ("name", "sku", "image", "description", "is_active")}),
+        ("Identification", {"fields": ("fmsi_number", "product_type", "position", "part_number", "brand", "category")}),
+        ("Vehicle fit", {"fields": ("application",)}),
+        ("Pricing", {"fields": ("unit_price", "cost_price", "unit_of_measure")}),
+    )
     list_display = (
         "name",
         "fmsi_number",

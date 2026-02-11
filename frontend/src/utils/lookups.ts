@@ -14,7 +14,7 @@ export function buildLookups(
     customer: (id: number) =>
       c[id] ? `${(c[id] as Customer).first_name || ''} ${(c[id] as Customer).last_name || ''}`.trim() || `#${id}` : `#${id}`,
     vehicle: (id: number | null | undefined) =>
-      !id ? 'Parts sale' : v[id] ? `${(v[id] as Vehicle).make} ${(v[id] as Vehicle).model} (${(v[id] as Vehicle).license_plate})` : `#${id}`,
+      !id ? 'Sales' : v[id] ? `${(v[id] as Vehicle).make} ${(v[id] as Vehicle).model} (${(v[id] as Vehicle).license_plate})` : `#${id}`,
     site: (id: number) => (s[id] ? (s[id] as Site).name : `#${id}`),
   }
 }

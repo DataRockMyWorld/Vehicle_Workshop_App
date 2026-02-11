@@ -2,12 +2,12 @@ import { describe, it, expect } from 'vitest'
 import { formatCurrency } from './currency'
 
 describe('formatCurrency', () => {
-  it('formats number with GH₵ and commas', () => {
-    expect(formatCurrency(1234.56)).toBe('GH₵1,234.56')
+  it('formats number with GHC and commas', () => {
+    expect(formatCurrency(1234.56)).toBe('GHC 1,234.56')
   })
 
   it('handles zero', () => {
-    expect(formatCurrency(0)).toBe('GH₵0.00')
+    expect(formatCurrency(0)).toBe('GHC 0.00')
   })
 
   it('returns em dash for null/undefined/empty string', () => {
@@ -21,6 +21,6 @@ describe('formatCurrency', () => {
   })
 
   it('handles string numbers', () => {
-    expect(formatCurrency('1500.5')).toBe('GH₵1,500.50')
+    expect(formatCurrency('1500.5')).toBe('GHC 1,500.50')
   })
 })

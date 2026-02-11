@@ -48,7 +48,7 @@ class SearchView(APIView):
             {
                 "id": sr.id,
                 "type": "service_request",
-                "title": f"#{sr.id} - {sr.vehicle}",
+                "title": f"{sr.display_number or sr.id} - {sr.vehicle}",
                 "subtitle": f"{sr.customer.first_name} {sr.customer.last_name} · {sr.site.name}",
                 "status": sr.status,
                 "url": f"/service-requests/{sr.id}",

@@ -4,7 +4,7 @@ from .models import Invoice
 
 @admin.register(Invoice)
 class InvoiceAdmin(admin.ModelAdmin):
-    list_display = ("id", "service_request", "total_cost", "paid", "payment_method", "created_at", "updated_at")
+    list_display = ("id", "display_number", "service_request", "total_cost", "paid", "payment_method", "created_at", "updated_at")
     list_filter = ("paid", "payment_method", "created_at")
     search_fields = (
         "service_request__id",
@@ -13,6 +13,6 @@ class InvoiceAdmin(admin.ModelAdmin):
         "service_request__vehicle__license_plate",
     )
     autocomplete_fields = ["service_request"]
-    readonly_fields = ("created_at", "updated_at")
+    readonly_fields = ("created_at", "updated_at", "display_number")
     date_hierarchy = "created_at"
     ordering = ("-created_at",)

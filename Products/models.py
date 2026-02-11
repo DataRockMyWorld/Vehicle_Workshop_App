@@ -67,6 +67,12 @@ class Product(models.Model):
         default=UnitOfMeasure.EACH,
     )
     is_active = models.BooleanField(default=True)
+    image = models.ImageField(
+        upload_to="products/",
+        blank=True,
+        null=True,
+        help_text="Optional product image. Managed via Django admin.",
+    )
 
     class Meta:
         ordering = ["name"]

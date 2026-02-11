@@ -6,7 +6,7 @@ import './Layout.css'
 const nav = [
   { to: '/', label: 'Dashboard', end: true },
   { to: '/service-requests', label: 'Service requests', end: false },
-  { to: '/parts-sale', label: 'Parts sale', end: false },
+  { to: '/parts-sale', label: 'Sales', end: false },
   { to: '/appointments', label: 'Appointments', end: false },
   { to: '/customers', label: 'Customers', end: false },
   { to: '/vehicles', label: 'Vehicles', end: false },

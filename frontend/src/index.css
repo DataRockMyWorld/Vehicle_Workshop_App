@@ -200,6 +200,7 @@ input::placeholder {
   font-weight: 500;
 }
 
+.badge--draft { background: rgba(200, 200, 200, 0.2); color: #666; font-style: italic; }
 .badge--pending { background: rgba(139, 146, 160, 0.2); color: var(--text-muted); }
 .badge--in-progress { background: rgba(34, 162, 185, 0.2); color: var(--accent); }
 .badge--completed { background: rgba(80, 180, 120, 0.2); color: #50b478; }

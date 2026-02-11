@@ -31,7 +31,7 @@ class ProductUsageInline(admin.TabularInline):
 
 @admin.register(ServiceRequest)
 class ServiceRequestAdmin(admin.ModelAdmin):
-    list_display = ("id", "customer", "vehicle", "site", "service_type", "status", "labor_cost", "assigned_mechanic", "created_at")
+    list_display = ("id", "display_number", "customer", "vehicle", "site", "service_type", "status", "labor_cost", "assigned_mechanic", "created_at")
     list_filter = ("status", "site", "created_at")
     search_fields = (
         "customer__first_name",
@@ -43,7 +43,7 @@ class ServiceRequestAdmin(admin.ModelAdmin):
         "description",
     )
     autocomplete_fields = ["customer", "vehicle", "site", "assigned_mechanic", "service_type"]
-    readonly_fields = ("created_at",)
+    readonly_fields = ("created_at", "display_number")
     date_hierarchy = "created_at"
     ordering = ("-created_at",)
     inlines = [ProductUsageInline]

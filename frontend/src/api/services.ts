@@ -50,7 +50,13 @@ export const serviceRequests = {
 }
 
 export const customers = {
-  list: (page?: number) => api(page ? `customers/?page=${page}` : 'customers/'),
+  list: (page?: number, pageSize?: number) => {
+    const params = new URLSearchParams()
+    if (page) params.set('page', String(page))
+    if (pageSize && pageSize > 0) params.set('page_size', String(pageSize))
+    const qs = params.toString()
+    return api(qs ? `customers/?${qs}` : 'customers/')
+  },
   get: (id: number | string) => api(`customers/${id}/`),
   create: (body: Record<string, unknown>) => api('customers/', { method: 'POST', body: JSON.stringify(body) }),
   update: (id: number | string, body: Record<string, unknown>) => api(`customers/${id}/`, { method: 'PATCH', body: JSON.stringify(body) }),
@@ -59,7 +65,13 @@ export const customers = {
 }
 
 export const vehicles = {
-  list: (page?: number) => api(page ? `vehicle/?page=${page}` : 'vehicle/'),
+  list: (page?: number, pageSize?: number) => {
+    const params = new URLSearchParams()
+    if (page) params.set('page', String(page))
+    if (pageSize && pageSize > 0) params.set('page_size', String(pageSize))
+    const qs = params.toString()
+    return api(qs ? `vehicle/?${qs}` : 'vehicle/')
+  },
   get: (id: number | string) => api(`vehicle/${id}/`),
   create: (body: Record<string, unknown>) => api('vehicle/', { method: 'POST', body: JSON.stringify(body) }),
   update: (id: number | string, body: Record<string, unknown>) => api(`vehicle/${id}/`, { method: 'PATCH', body: JSON.stringify(body) }),
@@ -75,7 +87,13 @@ export const mechanics = {
 }
 
 export const sites = {
-  list: (page?: number) => api(page ? `sites/?page=${page}` : 'sites/'),
+  list: (page?: number, pageSize?: number) => {
+    const params = new URLSearchParams()
+    if (page) params.set('page', String(page))
+    if (pageSize && pageSize > 0) params.set('page_size', String(pageSize))
+    const qs = params.toString()
+    return api(qs ? `sites/?${qs}` : 'sites/')
+  },
   get: (id: number | string) => api(`sites/${id}/`),
   create: (body: Record<string, unknown>) => api('sites/', { method: 'POST', body: JSON.stringify(body) }),
   update: (id: number | string, body: Record<string, unknown>) => api(`sites/${id}/`, { method: 'PATCH', body: JSON.stringify(body) }),
@@ -112,13 +130,44 @@ export const appointments = {
 }
 
 export const inventory = {
-  list: (params?: { page?: number; site_id?: number | string; low_stock?: boolean }) => {
+  list: (params?: {
+    page?: number
+    page_size?: number
+    site_id?: number | string
+    low_stock?: boolean
+    q?: string
+    category?: string
+    product_type?: string
+    position?: string
+    brand?: string
+    bin_location?: string
+    stock_status?: 'all' | 'low_stock' | 'in_stock' | 'out_of_stock'
+    ordering?: string
+  }) => {
     const p = buildApiParams({
       page: params?.page,
+      page_size: params?.page_size,
       site_id: params?.site_id,
       low_stock: params?.low_stock ? true : undefined,
+      q: params?.q || undefined,
+      category: params?.category || undefined,
+      product_type: params?.product_type || undefined,
+      position: params?.position || undefined,
+      brand: params?.brand || undefined,
+      bin_location: params?.bin_location || undefined,
+      stock_status: params?.stock_status && params.stock_status !== 'all' ? params.stock_status : undefined,
+      ordering: params?.ordering || undefined,
     })
     return api(withParams('inventory/', p))
+  },
+  filterOptions: (siteId?: number | string) => {
+    const p = buildApiParams({ site_id: siteId })
+    return api(withParams('inventory/filter-options/', p)) as Promise<{
+      categories: string[]
+      product_types: string[]
+      positions: string[]
+      brands: string[]
+    }>
   },
   lowStock: () => api('inventory/low-stock/'),
   get: (id: number | string) => api(`inventory/${id}/`),
@@ -128,7 +177,17 @@ export const inventory = {
 }
 
 export const invoices = {
-  list: (page?: number) => api(page ? `invoices/?page=${page}` : 'invoices/'),
+  list: (params?: { page?: number; paid?: string | boolean; date_from?: string; date_to?: string; site_id?: number; ordering?: string }) => {
+    const p = buildApiParams({
+      page: params?.page,
+      paid: params?.paid,
+      date_from: params?.date_from,
+      date_to: params?.date_to,
+      site_id: params?.site_id,
+      ordering: params?.ordering,
+    })
+    return api(withParams('invoices/', p))
+  },
   get: (id: number | string) => api(`invoices/${id}/`),
   update: (id: number | string, body: Record<string, unknown>) => api(`invoices/${id}/`, { method: 'PATCH', body: JSON.stringify(body) }),
   /** A4 invoice PDF – international standard, print-ready */

@@ -22,6 +22,7 @@ A Django-based management application for vehicle workshops. This app helps work
   - [Invoices](#invoices)
   - [Notifications](#notifications)
 - [Testing](#testing)
+- [Display Numbers](#display-numbers)
 - [Future Enhancements](#future-enhancements)
 
 ---
@@ -29,6 +30,7 @@ A Django-based management application for vehicle workshops. This app helps work
 ## Features
 
 - **Customer and Vehicle Management**: Manage customer details and their associated vehicles.
+- **Display Numbers**: Human-readable IDs (e.g. `INV-2025-00001`, `SR-2025-0042`, `APT-2025-0001`) for invoices, service requests, and appointments instead of raw database IDs.
 - **Service Request Management**: Create, assign, and complete service requests.
 - **Mechanic Assignment and Notifications**: Notify mechanics of assigned tasks.
 - **Inventory Management**: Track product usage and automatically adjust inventory upon service completion.
@@ -253,6 +255,24 @@ See `.github/workflows/ci.yml` for the full pipeline. Uses SQLite for tests (no 
 4. **Mark as Completed**: `POST /service-requests/{id}/complete/`
 5. **Check Inventory**: `GET /inventory/`
 6. **Verify Invoice**: `GET /invoices/{id}/`
+
+---
+
+## Display Numbers
+
+Invoices, service requests, and appointments use structured display numbers for easier reference:
+
+| Model           | Format        | Example        |
+|-----------------|---------------|----------------|
+| Invoice         | `INV-YYYY-NNNNN` | `INV-2025-00001` |
+| Service Request | `SR-YYYY-NNNN`   | `SR-2025-0042`   |
+| Appointment     | `APT-YYYY-NNNN`  | `APT-2025-0001`  |
+
+- **Auto-generated**: Display numbers are assigned automatically when records are created.
+- **Unique per year**: Sequences reset each calendar year (e.g. `INV-2026-00001` in 2026).
+- **User-facing**: Shown in the UI, PDFs, and API responses. URLs and API payloads still use integer `id` for lookups.
+
+For developers: The `common` app provides `DisplayNumberSequence` and `get_next_display_number(prefix, pad)` for atomic sequence generation. Backfill migrations populate existing records when upgrading.
 
 ---
 

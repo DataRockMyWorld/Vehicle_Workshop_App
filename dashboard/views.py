@@ -96,28 +96,31 @@ def _get_report_date_range(request):
 
 class SiteDashboardView(APIView):
     """
-    Sales metrics for site-scoped dashboard.
-    Returns revenue and sales counts for today and this week, filtered by user's site.
+    Sales metrics and infographics for site-scoped dashboard.
+    Returns revenue, sales counts, top products, service categories, payment breakdown.
     """
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         sid = user_site_id(request.user)
         now = timezone.now()
-        # Rolling windows: last 7 days and previous 7 days (avoids calendar week boundary issues)
         week_ago = now - timedelta(days=7)
         two_weeks_ago = now - timedelta(days=14)
-        # Today: start of day in configured timezone
+        thirty_days_ago = now - timedelta(days=30)
         local_now = timezone.localtime(now)
         today_start = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
 
         inv_qs = Invoice.objects.select_related("service_request")
+        sr_qs = ServiceRequest.objects.all()
         if sid is not None:
             inv_qs = inv_qs.filter(service_request__site_id=sid)
+            sr_qs = sr_qs.filter(site_id=sid)
 
         today_inv = inv_qs.filter(created_at__gte=today_start)
         week_inv = inv_qs.filter(created_at__gte=week_ago)
         prev_week_inv = inv_qs.filter(created_at__gte=two_weeks_ago, created_at__lt=week_ago)
+        month_inv = inv_qs.filter(created_at__gte=thirty_days_ago)
+        month_sr = sr_qs.filter(created_at__gte=thirty_days_ago)
 
         revenue_today = today_inv.aggregate(t=Sum("total_cost"))["t"] or Decimal("0")
         revenue_week = week_inv.aggregate(t=Sum("total_cost"))["t"] or Decimal("0")
@@ -125,9 +128,65 @@ class SiteDashboardView(APIView):
         sales_today = today_inv.count()
         sales_week = week_inv.count()
         sales_prev_week = prev_week_inv.count()
-
         paid_today = today_inv.filter(paid=True).aggregate(t=Sum("total_cost"))["t"] or Decimal("0")
         unpaid_today = today_inv.filter(paid=False).aggregate(t=Sum("total_cost"))["t"] or Decimal("0")
+
+        # --- Infographics: last 30 days ---
+        # Top products by quantity sold (completed jobs only)
+        completed_sr_ids = month_sr.filter(status="Completed").values_list("id", flat=True)
+        top_products_qs = (
+            ProductUsage.objects.filter(service_request_id__in=completed_sr_ids)
+            .values("product__id", "product__name")
+            .annotate(total_qty=Sum("quantity_used"))
+            .order_by("-total_qty")[:10]
+        )
+        top_products = [
+            {"product_id": x["product__id"], "product_name": x["product__name"] or "—", "quantity_sold": x["total_qty"]}
+            for x in top_products_qs
+        ]
+
+        # Service requests by category (Mechanical, Electrical, etc.)
+        by_category_qs = (
+            month_sr.filter(service_type__category__isnull=False)
+            .values("service_type__category__name")
+            .annotate(count=Count("id"))
+            .order_by("-count")
+        )
+        by_service_category = [
+            {"category": x["service_type__category__name"] or "Other", "count": x["count"]}
+            for x in by_category_qs
+        ]
+        # Include "Sales" / no category
+        uncat_count = month_sr.filter(service_type__category__isnull=True).count()
+        if uncat_count > 0:
+            by_service_category.append({"category": "Sales / Other", "count": uncat_count})
+
+        # Revenue by payment method (paid invoices only)
+        by_payment_qs = (
+            month_inv.filter(paid=True)
+            .exclude(Q(payment_method__isnull=True) | Q(payment_method=""))
+            .values("payment_method")
+            .annotate(revenue=Sum("total_cost"))
+            .order_by("-revenue")
+        )
+        payment_labels = dict(PaymentMethod.choices)
+        by_payment_method = [
+            {
+                "method": x["payment_method"],
+                "label": payment_labels.get(x["payment_method"], x["payment_method"]),
+                "revenue": str(round(x["revenue"] or 0, 2)),
+            }
+            for x in by_payment_qs
+        ]
+
+        # Parts vs labor revenue (approximation: labor from SR, parts from invoice - parts)
+        labor_total = month_sr.filter(status="Completed").aggregate(t=Sum("labor_cost"))["t"] or Decimal("0")
+        inv_total = month_inv.aggregate(t=Sum("total_cost"))["t"] or Decimal("0")
+        parts_approx = max(Decimal("0"), inv_total - labor_total)
+        revenue_mix = [
+            {"type": "Parts", "label": "Parts & products", "value": str(round(float(parts_approx), 2))},
+            {"type": "Labor", "label": "Labor / workmanship", "value": str(round(float(labor_total), 2))},
+        ]
 
         data = {
             "revenue_today": str(round(revenue_today, 2)),
@@ -138,6 +197,10 @@ class SiteDashboardView(APIView):
             "sales_count_prev_week": sales_prev_week,
             "paid_today": str(round(paid_today, 2)),
             "unpaid_today": str(round(unpaid_today, 2)),
+            "top_products": top_products,
+            "by_service_category": by_service_category,
+            "by_payment_method": by_payment_method,
+            "revenue_mix": revenue_mix,
         }
         if request.query_params.get("debug"):
             data["_debug"] = {
@@ -287,7 +350,7 @@ def _build_activities(limit=5, site_id=None):
                 "type": "service_request_created",
                 "site_id": sr.site_id,
                 "site_name": sr.site.name,
-                "description": f"New service request #{sr.id} ({sr.vehicle})",
+                "description": f"New service request {sr.display_number or sr.id} ({sr.vehicle})",
                 "created_at": sr.created_at.isoformat(),
                 "link": {"type": "service_request", "id": sr.id},
             }
@@ -306,7 +369,7 @@ def _build_activities(limit=5, site_id=None):
                 "type": "job_completed",
                 "site_id": sr.site_id,
                 "site_name": sr.site.name,
-                "description": f"Job completed #{sr.id} — Invoice GH₵{round(inv.total_cost, 2)}",
+                "description": f"Job completed {sr.display_number or sr.id} — Invoice GHC {round(inv.total_cost, 2)}",
                 "created_at": inv.created_at.isoformat(),
                 "link": {"type": "service_request", "id": sr.id},
             }

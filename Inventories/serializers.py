@@ -8,6 +8,29 @@ def _non_negative(value, name="value"):
     return value
 
 
+class InventoryListSerializer(serializers.ModelSerializer):
+    """List view with embedded product/site details for fast display and search results."""
+
+    product_name = serializers.CharField(source="product.name", read_only=True)
+    product_sku = serializers.CharField(source="product.sku", read_only=True, allow_null=True)
+    product_category = serializers.CharField(source="product.category", read_only=True)
+    product_unit = serializers.CharField(source="product.unit_of_measure", read_only=True)
+    product_fmsi = serializers.CharField(source="product.fmsi_number", read_only=True, allow_null=True)
+    product_brand = serializers.CharField(source="product.brand", read_only=True, allow_blank=True)
+    product_part_number = serializers.CharField(source="product.part_number", read_only=True, allow_blank=True)
+    site_name = serializers.CharField(source="site.name", read_only=True)
+
+    class Meta:
+        model = Inventory
+        fields = [
+            "id", "product", "site",
+            "product_name", "product_sku", "product_category", "product_unit",
+            "product_fmsi", "product_brand", "product_part_number", "site_name",
+            "quantity_on_hand", "quantity_reserved", "reorder_level", "reorder_quantity",
+            "bin_location", "last_counted_at", "last_restocked_at",
+        ]
+
+
 class InventorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Inventory

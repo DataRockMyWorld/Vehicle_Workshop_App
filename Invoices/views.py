@@ -1,3 +1,4 @@
+import html
 import io
 from datetime import datetime
 
@@ -7,18 +8,28 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, portrait
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import inch, mm
-from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.platypus import Image, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
 from accounts.permissions import IsReadOnlyForHQ, user_site_id
 from .models import Invoice, PaymentMethod
-from .serializers import InvoiceSerializer
+from .serializers import InvoiceSerializer, InvoiceListSerializer
 
 
 def _business_config():
     return getattr(settings, "FEELING_AUTOPART", {}) or {}
+
+
+def _escape(s):
+    """Escape HTML entities so user content doesn't break PDF or show raw tags."""
+    if s is None:
+        return ""
+    return html.escape(str(s))
+
+
+CURRENCY_PREFIX = "GHC"
 
 
 def _generate_receipt_pdf(invoice, request=None):
@@ -101,10 +112,10 @@ def _generate_receipt_pdf(invoice, request=None):
         )
     )
     elements.append(
-        Paragraph(f"<font size='8'><b>RECEIPT</b> #{invoice.id}</font>", styles["Normal"])
+        Paragraph(f"<font size='8'><b>RECEIPT</b> {invoice.display_number or invoice.id}</font>", styles["Normal"])
     )
     elements.append(
-        Paragraph(f"<font size='7'>Invoice #{invoice.id} | {dt_str}</font>", styles["Normal"])
+        Paragraph(f"<font size='7'>Invoice {invoice.display_number or invoice.id} | {dt_str}</font>", styles["Normal"])
     )
     elements.append(
         Paragraph(f"<font size='7'>Cashier: {cashier} | POS: {terminal_id}</font>", styles["Normal"])
@@ -121,15 +132,16 @@ def _generate_receipt_pdf(invoice, request=None):
         price = float(u.product.unit_price)
         qty = u.quantity_used
         line_total = price * qty
-        desc = u.product.name[:24] + ".." if len(u.product.name) > 26 else u.product.name
-        sku = (u.product.sku or u.product.part_number or "")[:12]
+        name_esc = _escape(u.product.name)
+        desc = (name_esc[:24] + ".." if len(name_esc) > 26 else name_esc)
+        sku = _escape((u.product.sku or u.product.part_number or "")[:12])
         compat = ""
         if u.product.application:
-            compat = u.product.application.split(",")[0].strip()[:20] if u.product.application else ""
+            compat = _escape((u.product.application.split(",")[0].strip()[:20] if u.product.application else ""))
         if sku:
-            desc = f"{desc}\n{sku}"
+            desc = f"{desc}<br/>{sku}"
         if compat:
-            desc = f"{desc}\n({compat})"
+            desc = f"{desc}<br/>({compat})"
         data.append([
             Paragraph(f"<font size='7'>{desc}</font>", styles["Normal"]),
             str(qty),
@@ -170,12 +182,15 @@ def _generate_receipt_pdf(invoice, request=None):
     if vat_rate > 0:
         vat_amt = round(subtotal * vat_rate / 100, 2)
 
-    totals_data = [["Subtotal:", f"GH₵{subtotal:,.2f}"]]
+    totals_data = [["Subtotal:", f"{CURRENCY_PREFIX} {subtotal:,.2f}"]]
     if discount > 0:
-        totals_data.append(["Discount:", f"-GH₵{discount:,.2f}"])
+        totals_data.append(["Discount:", f"-{CURRENCY_PREFIX} {discount:,.2f}"])
     if vat_amt > 0:
-        totals_data.append([f"VAT ({vat_rate}%):", f"GH₵{vat_amt:,.2f}"])
-    totals_data.append(["<b>TOTAL PAYABLE</b>", f"<b>GH₵{total:,.2f}</b>"])
+        totals_data.append([f"VAT ({vat_rate}%):", f"{CURRENCY_PREFIX} {vat_amt:,.2f}"])
+    totals_data.append([
+        Paragraph("<b>TOTAL PAYABLE</b>", styles["Normal"]),
+        Paragraph(f"<b>{CURRENCY_PREFIX} {total:,.2f}</b>", styles["Normal"]),
+    ])
     totals_data.append([" ", " "])
 
     method_label = "—"
@@ -184,14 +199,15 @@ def _generate_receipt_pdf(invoice, request=None):
             invoice.payment_method, invoice.payment_method
         )
     totals_data.append(["Payment:", method_label])
-    totals_data.append(["Amount paid:", f"GH₵{total:,.2f}" if invoice.paid else "—"])
-    totals_data.append(["Change/Balance:", "GH₵0.00" if invoice.paid else f"GH₵{total:,.2f}"])
+    totals_data.append(["Amount paid:", f"{CURRENCY_PREFIX} {total:,.2f}" if invoice.paid else "—"])
+    totals_data.append(["Change/Balance:", f"{CURRENCY_PREFIX} 0.00" if invoice.paid else f"{CURRENCY_PREFIX} {total:,.2f}"])
 
     tt = Table(totals_data, colWidths=[90, 86])
     tt.setStyle(
         TableStyle([
             ("ALIGN", (0, 0), (0, -1), "RIGHT"),
             ("ALIGN", (1, 0), (1, -1), "RIGHT"),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
             ("FONTNAME", (0, -6), (-1, -4), "Helvetica-Bold"),
             ("FONTSIZE", (0, -6), (-1, -4), 10),
             ("FONTSIZE", (0, 0), (-1, -7), 8),
@@ -220,7 +236,7 @@ def _generate_receipt_pdf(invoice, request=None):
     )
     elements.append(
         Paragraph(
-            f"<font size='6'>Verify: Invoice #{invoice.id}</font>",
+            f"<font size='6'>Verify: Invoice {invoice.display_number or invoice.id}</font>",
             styles["Normal"],
         )
     )
@@ -275,6 +291,17 @@ def _generate_invoice_pdf(invoice):
     styles = getSampleStyleSheet()
     elements = []
 
+    # ---- Logo at top (if configured) ----
+    logo_path = cfg.get("LOGO_PATH") or cfg.get("LOGO")
+    if logo_path:
+        try:
+            img = Image(logo_path, width=1.2 * inch, height=0.6 * inch)
+            img.hAlign = "LEFT"
+            elements.append(img)
+            elements.append(Spacer(1, 0.2 * inch))
+        except Exception:
+            pass
+
     # ---- Header: Logo area + Business info ----
     header_left = (
         f"<b><font size='16' color='#0d9488'>{biz_name}</font></b><br/>"
@@ -293,10 +320,10 @@ def _generate_invoice_pdf(invoice):
     due_date = dt  # Same as invoice date for immediate payment
     header_right = (
         f"<b><font size='14'>INVOICE</font></b><br/>"
-        f"<font size='11'>#{invoice.id}</font><br/><br/>"
+        f"<font size='11'>{invoice.display_number or invoice.id}</font><br/><br/>"
         f"<font size='9'>Invoice date: {dt.strftime('%d/%m/%Y')}</font><br/>"
         f"<font size='9'>Due date: {due_date.strftime('%d/%m/%Y')}</font><br/>"
-        f"<font size='9'>Job ref: SR#{sr.id}</font>"
+        f"<font size='9'>Job ref: {sr.display_number or sr.id}</font>"
     )
 
     header_data = [[Paragraph(header_left, styles["Normal"]), Paragraph(header_right, styles["Normal"])]]
@@ -357,17 +384,18 @@ def _generate_invoice_pdf(invoice):
         if vat_rate > 0:
             vat_amt = round(price * qty * vat_rate / 100, 2)
         line_total = price * qty
-        desc = u.product.name
-        sku = u.product.sku or u.product.part_number or "—"
-        compat = (u.product.application or "").split(",")[0].strip()[:30] or "—"
+        desc = _escape(u.product.name)
+        sku = _escape(u.product.sku or u.product.part_number or "—")
+        compat_raw = (u.product.application or "").split(",")[0].strip()[:35] or "—"
+        compat = _escape(compat_raw)
         data.append([
-            desc[:40],
-            sku[:15],
-            compat,
+            Paragraph(f"<font size='9'>{desc}</font>", styles["Normal"]),
+            Paragraph(f"<font size='8'>{sku}</font>", styles["Normal"]),
+            Paragraph(f"<font size='8'>{compat}</font>", styles["Normal"]),
             str(qty),
-            f"GH₵{price:,.2f}",
-            f"GH₵{vat_amt:,.2f}" if vat_amt else "—",
-            f"GH₵{line_total:,.2f}",
+            f"{CURRENCY_PREFIX} {price:,.2f}",
+            f"{CURRENCY_PREFIX} {vat_amt:,.2f}" if vat_amt else "—",
+            f"{CURRENCY_PREFIX} {line_total:,.2f}",
         ])
 
     labor_pdf = float(getattr(sr, "labor_cost", 0) or 0)
@@ -377,12 +405,12 @@ def _generate_invoice_pdf(invoice):
             "—",
             "—",
             "1",
-            f"GH₵{labor_pdf:,.2f}",
+            f"{CURRENCY_PREFIX} {labor_pdf:,.2f}",
             "—",
-            f"GH₵{labor_pdf:,.2f}",
+            f"{CURRENCY_PREFIX} {labor_pdf:,.2f}",
         ])
 
-    t = Table(data, colWidths=[1.5 * inch, 0.8 * inch, 1.2 * inch, 0.4 * inch, 0.8 * inch, 0.6 * inch, 0.9 * inch])
+    t = Table(data, colWidths=[1.8 * inch, 1.0 * inch, 1.2 * inch, 0.4 * inch, 0.85 * inch, 0.65 * inch, 0.9 * inch])
     t.setStyle(
         TableStyle([
             ("BACKGROUND", (0, 0), (-1, 0), accent),
@@ -408,18 +436,22 @@ def _generate_invoice_pdf(invoice):
     if vat_rate > 0:
         vat_total = round(subtotal * vat_rate / 100, 2)
 
-    totals = [["Subtotal", f"GH₵{subtotal:,.2f}"]]
+    totals = [["Subtotal", f"{CURRENCY_PREFIX} {subtotal:,.2f}"]]
     if discount > 0:
-        totals.append(["Discount", f"-GH₵{discount:,.2f}"])
+        totals.append(["Discount", f"-{CURRENCY_PREFIX} {discount:,.2f}"])
     if vat_total > 0:
-        totals.append([f"VAT ({vat_rate}%)", f"GH₵{vat_total:,.2f}"])
-    totals.append(["<b>TOTAL AMOUNT DUE</b>", f"<b>GH₵{total:,.2f}</b>"])
+        totals.append([f"VAT ({vat_rate}%)", f"{CURRENCY_PREFIX} {vat_total:,.2f}"])
+    totals.append([
+        Paragraph("<b>TOTAL AMOUNT DUE</b>", styles["Normal"]),
+        Paragraph(f"<b>{CURRENCY_PREFIX} {total:,.2f}</b>", styles["Normal"]),
+    ])
 
     tt = Table(totals, colWidths=[1.2 * inch, 1.5 * inch])
     tt.setStyle(
         TableStyle([
             ("ALIGN", (0, 0), (0, -1), "RIGHT"),
             ("ALIGN", (1, 0), (1, -1), "RIGHT"),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
             ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
             ("FONTSIZE", (0, -1), (-1, -1), 12),
             ("LINEABOVE", (0, -1), (-1, -1), 2, accent),
@@ -433,10 +465,12 @@ def _generate_invoice_pdf(invoice):
     method_label = "—"
     if invoice.paid and invoice.payment_method:
         method_label = dict(PaymentMethod.choices).get(invoice.payment_method, invoice.payment_method)
+    bank_details = (cfg.get("BANK_DETAILS") or "").strip()
+    bank_line = bank_details if bank_details else "Bank / MoMo details: As displayed at branch"
     payment_text = (
         f"<b>Payment:</b> {method_label}<br/>"
         f"<font size='9'>Terms: Immediate</font><br/>"
-        f"<font size='9'>Bank / MoMo details: As displayed at branch</font>"
+        f"<font size='9'>{bank_line}</font>"
     )
     elements.append(Paragraph(payment_text, styles["Normal"]))
     elements.append(Spacer(1, 0.4 * inch))
@@ -527,6 +561,16 @@ def _invoice_queryset(user):
     return qs
 
 
+def _parse_date(s):
+    """Parse YYYY-MM-DD to date. Returns None if invalid."""
+    if not s or not isinstance(s, str):
+        return None
+    try:
+        return datetime.strptime(s.strip()[:10], "%Y-%m-%d").date()
+    except ValueError:
+        return None
+
+
 class InvoiceListCreateView(generics.ListCreateAPIView):
     queryset = Invoice.objects.select_related(
         "service_request",
@@ -534,11 +578,48 @@ class InvoiceListCreateView(generics.ListCreateAPIView):
         "service_request__vehicle",
         "service_request__site",
     ).all()
-    serializer_class = InvoiceSerializer
+    serializer_class = InvoiceListSerializer  # Default for list (GET)
     permission_classes = [IsAuthenticated, IsReadOnlyForHQ]
 
+    def get_serializer_class(self):
+        if self.request.method == "POST":
+            return InvoiceSerializer
+        return InvoiceListSerializer
+
     def get_queryset(self):
-        return _invoice_queryset(self.request.user)
+        qs = _invoice_queryset(self.request.user)
+        params = self.request.query_params
+        # Filter: paid (true/false)
+        paid_val = params.get("paid")
+        if paid_val is not None and paid_val != "":
+            if str(paid_val).lower() in ("true", "1", "yes"):
+                qs = qs.filter(paid=True)
+            elif str(paid_val).lower() in ("false", "0", "no"):
+                qs = qs.filter(paid=False)
+        # Filter: date_from
+        date_from = _parse_date(params.get("date_from"))
+        if date_from:
+            qs = qs.filter(created_at__date__gte=date_from)
+        # Filter: date_to
+        date_to = _parse_date(params.get("date_to"))
+        if date_to:
+            qs = qs.filter(created_at__date__lte=date_to)
+        # Filter: site_id (CEO only)
+        sid = user_site_id(self.request.user)
+        if sid is None:
+            site_param = params.get("site_id")
+            if site_param:
+                try:
+                    site_id = int(site_param)
+                    qs = qs.filter(service_request__site_id=site_id)
+                except (ValueError, TypeError):
+                    pass
+        # Ordering
+        order = params.get("ordering", "-created_at")
+        allowed = {"created_at", "-created_at", "total_cost", "-total_cost", "id", "-id"}
+        if order in allowed:
+            qs = qs.order_by(order)
+        return qs
 
     def perform_create(self, serializer):
         if not self.request.user.is_superuser:

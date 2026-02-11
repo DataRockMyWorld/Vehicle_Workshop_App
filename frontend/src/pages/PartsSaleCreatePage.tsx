@@ -20,7 +20,6 @@ export default function PartsSaleCreatePage() {
   const [quickSale, setQuickSale] = useState(true)
   const [customerId, setCustomerId] = useState('')
   const [siteId, setSiteId] = useState(userSiteId ? String(userSiteId) : '')
-  const [note, setNote] = useState('')
 
   useEffect(() => {
     Promise.all([
@@ -53,9 +52,9 @@ export default function PartsSaleCreatePage() {
         customer: custId,
         site: effectiveSiteId,
         vehicle: null,
-        status: 'Pending',
+        status: 'Draft',
         service_type: null,
-        description: note.trim() || 'Parts sale',
+        description: 'Sales',
       }
       const created = (await serviceRequests.create(payload)) as { id: number }
       navigate(`/service-requests/${created.id}`)
@@ -70,7 +69,7 @@ export default function PartsSaleCreatePage() {
     return (
       <div className="parts-sale-create">
         <div className="parts-sale-create__header">
-          <Link to="/parts-sale" className="parts-sale-create__back">← Back to parts sales</Link>
+          <Link to="/parts-sale" className="parts-sale-create__back">← Back to sales</Link>
         </div>
         <div className="card">
           <Loader label="Loading…" />
@@ -82,8 +81,8 @@ export default function PartsSaleCreatePage() {
   return (
     <div className="parts-sale-create">
       <div className="parts-sale-create__header">
-        <Link to="/parts-sale" className="parts-sale-create__back">← Back to parts sales</Link>
-        <h1 className="parts-sale-create__title">New parts sale</h1>
+        <Link to="/parts-sale" className="parts-sale-create__back">← Back to sales</Link>
+        <h1 className="parts-sale-create__title">New sale</h1>
         <p className="parts-sale-create__subtitle">Sell parts to a walk-in or registered customer</p>
       </div>
 
@@ -143,15 +142,11 @@ export default function PartsSaleCreatePage() {
             )}
           </section>
 
-          <section className="parts-sale-create__section">
-            <h3 className="parts-sale-create__section-title">Location</h3>
-            <div className="form-group">
-              <label className="label">Site</label>
-              {userSiteId ? (
-                <div className="form-readonly">
-                  {sitesList.find((s: { id: number }) => s.id === userSiteId)?.name ?? `Site #${userSiteId}`}
-                </div>
-              ) : (
+          {!userSiteId && (
+            <section className="parts-sale-create__section">
+              <h3 className="parts-sale-create__section-title">Location</h3>
+              <div className="form-group">
+                <label className="label">Site</label>
                 <select
                   id="site"
                   className="select"
@@ -164,22 +159,9 @@ export default function PartsSaleCreatePage() {
                     <option key={s.id} value={s.id}>{s.name}</option>
                   ))}
                 </select>
-              )}
-            </div>
-          </section>
-
-          <section className="parts-sale-create__section">
-            <h3 className="parts-sale-create__section-title">Note (optional)</h3>
-            <input
-              id="note"
-              type="text"
-              className="input"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="e.g. Brake pads, oil filter…"
-              aria-label="Sale note"
-            />
-          </section>
+              </div>
+            </section>
+          )}
 
           <div className="parts-sale-create__actions">
             <Link to="/parts-sale" className="btn btn--secondary">Cancel</Link>

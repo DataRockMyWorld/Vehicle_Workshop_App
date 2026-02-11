@@ -72,6 +72,25 @@ class InvoiceAPITestCase(WorkshopAPITestCaseMixin, APITestCase):
         self.assertIn("application/pdf", response.get("Content-Type", ""))
         self.assertGreater(len(response.content), 100)
 
+    def test_invoice_auto_generates_display_number_on_save(self):
+        """Invoice gets INV-YYYY-NNNNN display_number when created without one."""
+        from ServiceRequests.models import ServiceRequest
+        sr = ServiceRequest.objects.create(
+            customer=self.customer,
+            vehicle=self.vehicle,
+            site=self.site_a,
+            service_type=self.service_type,
+            description="Extra SR for invoice test",
+            status="Pending",
+        )
+        inv = Invoice.objects.create(
+            service_request=sr,
+            subtotal=Decimal("50"),
+            total_cost=Decimal("50"),
+        )
+        self.assertTrue(inv.display_number)
+        self.assertRegex(inv.display_number, r"^INV-\d{4}-\d{5}$")
+
     def test_site_user_cannot_see_other_site_invoice(self):
         """Site user cannot access invoice from another site."""
         from ServiceRequests.models import ServiceRequest

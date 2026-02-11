@@ -188,23 +188,34 @@ class ProductImportExcelView(APIView):
 class ProductSearchView(APIView):
     """GET /api/v1/products/search/?q=... — auto-suggest search by FMSI, position, brand, application.
     Optional ?vehicle=Make Model — filter to products applicable to that vehicle.
-    Optional ?site_id=N — when provided with empty q, return products so frontend can show availability.
-    Availability is computed client-side from inventory; we no longer restrict to in-stock-only here."""
+    Optional ?site_id=N — restrict to products in that site's inventory (for add-items / parts sale).
+    Availability is computed client-side from inventory."""
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        from Inventories.models import Inventory
+
         q = (request.query_params.get("q") or "").strip()
         vehicle = (request.query_params.get("vehicle") or "").strip()
         site_id = request.query_params.get("site_id")
         limit = min(25, max(5, int(request.query_params.get("limit", 15))))
         qs = Product.objects.filter(is_active=True)
+
+        # Restrict to products in site's inventory when adding items to a sale/service at that site
+        if site_id:
+            try:
+                sid = int(site_id)
+                product_ids = Inventory.objects.filter(site_id=sid).values_list("product_id", flat=True)
+                qs = qs.filter(id__in=product_ids)
+            except (ValueError, TypeError):
+                pass
+
         # Optional: filter by vehicle make/model (application contains it)
         if vehicle:
             qs = qs.filter(application__icontains=vehicle)
         if not q:
-            # Only return results without query if filtering by vehicle or site
-            if not vehicle and not site_id:
-                return Response([])
+            # Return initial product list for browse/select (e.g. when adding to inventory).
+            # With vehicle/site_id we could add availability; for now return catalog.
             qs = qs.order_by("name")[:limit]
             return Response([{
                 "id": p.id,
@@ -216,6 +227,7 @@ class ProductSearchView(APIView):
                 "brand": p.brand or "",
                 "unit_price": str(p.unit_price),
                 "sku": p.sku or "",
+                "image_url": request.build_absolute_uri(p.image.url) if p.image else None,
             } for p in qs])
         qs = qs.filter(
             Q(name__icontains=q)
@@ -238,6 +250,7 @@ class ProductSearchView(APIView):
                 "brand": p.brand or "",
                 "unit_price": str(p.unit_price),
                 "sku": p.sku or "",
+                "image_url": request.build_absolute_uri(p.image.url) if p.image else None,
             }
             for p in qs
         ])

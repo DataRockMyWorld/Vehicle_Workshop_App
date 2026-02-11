@@ -52,6 +52,10 @@ For **new** or **refactored** endpoints, prefer:
 
 Use Swagger UI to explore endpoints, try requests, and inspect request/response schemas. JWT can be passed via the "Authorize" button (Bearer token).
 
+## Display Numbers
+
+Invoice, ServiceRequest, and Appointment responses include a `display_number` field (e.g. `INV-2025-00001`, `SR-2025-0042`, `APT-2025-0001`). Use this for user-facing labels and printouts. API lookups and URLs still use integer `id`.
+
 ## Query Optimization
 
 List and detail views use `select_related()` and `prefetch_related()` to avoid N+1 queries:

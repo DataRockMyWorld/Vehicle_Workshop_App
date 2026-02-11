@@ -160,12 +160,17 @@
 
 .sr-detail__add-part-search {
   flex: 1;
-  min-width: 400px;
+  min-width: 420px;
   max-width: 100%;
 }
 
 .sr-detail__add-part-search .product-search {
   min-width: 100%;
+}
+
+.sr-detail__add-part-search .product-search__input {
+  font-size: 0.95rem;
+  padding: 0.7rem 2.5rem 0.7rem 0.85rem;
 }
 
 .sr-detail__add-part .select {

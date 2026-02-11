@@ -12,7 +12,7 @@ import { CAR_MAKES, getModelsForMake } from '../data/carMakesModels'
 import './GenericListPage.css'
 
 export default function VehiclesPage() {
-  const { canWrite, siteId } = useAuth()
+  const { canWrite, canSeeAllSites, siteId } = useAuth()
   const { items: list, count, loading, error, page, setPage, totalPages, pageSize, refetch } = usePaginatedList(
     (p) => vehicles.list(p),
     []
@@ -290,7 +290,7 @@ export default function VehiclesPage() {
                   <th>Year</th>
                   <th>License</th>
                   <th>Customer</th>
-                  <th>Site</th>
+                  {canSeeAllSites && <th>Site</th>}
                   <th>Last serviced</th>
                   <th>Reminder (days)</th>
                 </tr>
@@ -310,7 +310,7 @@ export default function VehiclesPage() {
                         {name(r.customer)}
                       </Link>
                     </td>
-                    <td>{siteName(r.site)}</td>
+                    {canSeeAllSites && <td>{siteName(r.site)}</td>}
                     <td>{r.last_serviced ? new Date(r.last_serviced).toLocaleDateString() : '—'}</td>
                     <td>{r.service_interval_days || 180}</td>
                   </tr>

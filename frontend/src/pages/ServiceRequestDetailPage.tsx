@@ -19,6 +19,7 @@ import { formatCurrency } from '../utils/currency'
 import { useAuth } from '../context/AuthContext'
 import Receipt from '../components/Receipt'
 import InvoiceDocument from '../components/InvoiceDocument'
+import CompleteSaleModal from '../components/CompleteSaleModal'
 import './ServiceRequestDetailPage.css'
 
 function buildLookups(customers, vehicles, sites, mechanics) {
@@ -29,7 +30,7 @@ function buildLookups(customers, vehicles, sites, mechanics) {
   const m = byId(mechanics)
   return {
     customer: (id) => (c[id] ? `${c[id].first_name} ${c[id].last_name}` : `#${id}`),
-    vehicle: (id) => (!id ? 'Parts sale' : v[id] ? `${v[id].make} ${v[id].model} (${v[id].license_plate})` : `#${id}`),
+    vehicle: (id) => (!id ? 'Sales' : v[id] ? `${v[id].make} ${v[id].model} (${v[id].license_plate})` : `#${id}`),
     site: (id) => (s[id] ? s[id].name : `#${id}`),
     mechanic: (id) => (m[id] ? m[id].name : id ? `#${id}` : '—'),
   }
@@ -58,6 +59,7 @@ export default function ServiceRequestDetailPage() {
   const [assignMechanicId, setAssignMechanicId] = useState('')
   const [addProductId, setAddProductId] = useState('')
   const [addQty, setAddQty] = useState(1)
+  const [resetProductSearch, setResetProductSearch] = useState(0)
   const [formError, setFormError] = useState('')
   const [promotionsList, setPromotionsList] = useState([])
   const [selectedPromotionId, setSelectedPromotionId] = useState('')
@@ -69,6 +71,7 @@ export default function ServiceRequestDetailPage() {
   const [deletingUsageId, setDeletingUsageId] = useState(null)
   const [paymentMethod, setPaymentMethod] = useState('cash')
   const [markingPaid, setMarkingPaid] = useState(false)
+  const [showCompleteModal, setShowCompleteModal] = useState(false)
 
   const lk = buildLookups(customersList, vehiclesList, sitesList, mechanicsList)
   const siteInv = (invList || []).filter((x) => sr && Number(x.site) === Number(sr.site))
@@ -175,6 +178,7 @@ export default function ServiceRequestDetailPage() {
       setUsageList(toList(u))
       setAddProductId('')
       setAddQty(1)
+      setResetProductSearch((prev) => prev + 1)
     } catch (e) {
       setFormError(apiErrorMsg(e))
     } finally {
@@ -240,26 +244,52 @@ export default function ServiceRequestDetailPage() {
 
   const isPartsSale = !sr?.vehicle
 
-  const handleComplete = async () => {
+  const handleCompleteWithModal = async (data: { paymentMethod: string; discountAmount?: number; promotionId?: number }) => {
     if (!sr || sr.status === 'Completed') return
-    const confirmMsg = isPartsSale
-      ? 'Complete this sale? An invoice will be created.'
-      : 'Mark this service request as completed? Inventory will be adjusted and an invoice created.'
-    if (!window.confirm(confirmMsg)) return
+    
     setFormError('')
     setCompleting(true)
+    
     const body: Record<string, unknown> = {}
-    if (selectedPromotionId) body.promotion_id = parseInt(selectedPromotionId, 10)
-    if (manualDiscount.trim() && !isNaN(parseFloat(manualDiscount))) body.discount_amount = parseFloat(manualDiscount)
-    if (laborCost.trim() && !isNaN(parseFloat(laborCost)) && parseFloat(laborCost) >= 0) body.labor_cost = parseFloat(laborCost)
+    if (data.promotionId) body.promotion_id = data.promotionId
+    if (data.discountAmount && data.discountAmount > 0) body.discount_amount = data.discountAmount
+    if (laborCost.trim() && !isNaN(parseFloat(laborCost)) && parseFloat(laborCost) >= 0) {
+      body.labor_cost = parseFloat(laborCost)
+    }
+    
     try {
-      const updated = (await serviceRequests.complete(sr.id as number, Object.keys(body).length ? body : undefined)) as Record<string, unknown>
+      // 1. Complete the service request (creates invoice)
+      const updated = (await serviceRequests.complete(
+        sr.id as number, 
+        Object.keys(body).length ? body : undefined
+      )) as Record<string, unknown>
       setSr(updated)
-      const [u, inv] = await Promise.all([productUsage.list(sr.id as number), invoices.list()])
+      
+      // 2. Refresh usage and invoice lists
+      const [u, inv] = await Promise.all([
+        productUsage.list(sr.id as number), 
+        invoices.list()
+      ])
       setUsageList(toList(u))
       setInvoiceList(toList(inv))
+      
+      // 3. Mark invoice as paid immediately
+      const invoiceForSr = toList(inv).find((i: any) => i.service_request === sr.id)
+      if (invoiceForSr) {
+        await invoices.update(invoiceForSr.id, {
+          paid: true,
+          payment_method: data.paymentMethod,
+        })
+        
+        // 4. Refresh invoice list again to show paid status
+        const invFresh = await invoices.list()
+        setInvoiceList(toList(invFresh))
+      }
+      
+      setShowCompleteModal(false)
     } catch (e) {
       setFormError(apiErrorMsg(e))
+      throw e // Re-throw to show error in modal
     } finally {
       setCompleting(false)
     }
@@ -298,51 +328,20 @@ export default function ServiceRequestDetailPage() {
       <div className="page-header">
         <div className="sr-detail__back">
           <Link to={isPartsSale ? '/parts-sale' : '/service-requests'} className="btn btn--ghost">
-            {isPartsSale ? '← Parts sales' : '← Service requests'}
+            {isPartsSale ? '← Sales' : '← Service requests'}
           </Link>
-          <span className="sr-detail__id">{isPartsSale ? `Parts sale #${String(sr.id)}` : `#${String(sr.id)}`}</span>
+          <span className="sr-detail__id">{isPartsSale ? `Sale ${(sr as { display_number?: string }).display_number || sr.id}` : ((sr as { display_number?: string }).display_number || `#${sr.id}`)}</span>
         </div>
         <div className="sr-detail__actions">
           {canEdit && (
-            <>
-              {promotionsList.length > 0 && (
-                <select
-                  className="select"
-                  value={selectedPromotionId}
-                  onChange={(e) => setSelectedPromotionId(e.target.value)}
-                  style={{ marginRight: '0.5rem', minWidth: '140px' }}
-                  aria-label="Apply promotion"
-                >
-                  <option value="">No promotion</option>
-                  {promotionsList.map((pr) => (
-                    <option key={pr.id} value={pr.id}>
-                      {pr.title}
-                      {pr.discount_percent ? ` (${pr.discount_percent}% off)` : ''}
-                      {pr.discount_amount ? ` (GH₵${pr.discount_amount} off)` : ''}
-                    </option>
-                  ))}
-                </select>
-              )}
-              <input
-                type="number"
-                className="input"
-                placeholder="Discount"
-                value={manualDiscount}
-                onChange={(e) => setManualDiscount(e.target.value)}
-                min="0"
-                step="0.01"
-                style={{ width: '90px', marginRight: '0.5rem' }}
-                aria-label="Manual discount amount"
-              />
-              <button
-                type="button"
-                className="btn btn--primary"
-                onClick={handleComplete}
-                disabled={completing}
-              >
-                {completing ? 'Completing…' : isPartsSale ? 'Complete sale' : 'Mark complete'}
-              </button>
-            </>
+            <button
+              type="button"
+              className="btn btn--success btn--large"
+              onClick={() => setShowCompleteModal(true)}
+              disabled={usageWithNames.length === 0}
+            >
+              {isPartsSale ? '💰 Complete Sale' : '✓ Complete Service'}
+            </button>
           )}
         </div>
       </div>
@@ -386,7 +385,7 @@ export default function ServiceRequestDetailPage() {
                     <dd>
                   {canEdit ? (
                     <span className="sr-detail__labor-edit">
-                      GH₵
+                      GHC
                       <input
                         type="number"
                         className="input"
@@ -460,8 +459,7 @@ export default function ServiceRequestDetailPage() {
               <form className="sr-detail__add-part" onSubmit={handleAddPart}>
                 <div className="sr-detail__add-part-search">
                   <ProductSearch
-                    key={addProductId ? `sel-${addProductId}` : 'empty'}
-                    placeholder={isPartsSale ? 'Search products…' : 'Search by FMSI, position, brand, application…'}
+                    placeholder={isPartsSale ? 'Search by name, SKU, FMSI, brand, part #…' : 'Search by name, SKU, FMSI, brand, position, application…'}
                     onSelect={(p) => {
                       setAddProductId(p ? String(p.id) : '')
                       setAddQty(1)
@@ -470,6 +468,7 @@ export default function ServiceRequestDetailPage() {
                     getAvailable={available}
                     vehicle={vehicleForProductSearch}
                     siteId={sr?.site != null ? Number(sr.site) : null}
+                    resetTrigger={resetProductSearch}
                   />
                 </div>
                 <input
@@ -582,7 +581,7 @@ export default function ServiceRequestDetailPage() {
             <section className="sr-detail__section sr-detail__section--invoice">
               <div className="invoice-card__header">
                 <div>
-                  <h2 className="invoice-card__title">Invoice #{invoiceForSr.id}</h2>
+                  <h2 className="invoice-card__title">Invoice {(invoiceForSr as { display_number?: string }).display_number || invoiceForSr.id}</h2>
                   <p className="invoice-card__date">
                     {invoiceForSr.created_at
                       ? new Date(invoiceForSr.created_at).toLocaleDateString('en-GB', {
@@ -726,7 +725,7 @@ export default function ServiceRequestDetailPage() {
                 const cust = customersList?.find((c) => c.id === sr?.customer)
                 const custName = cust ? `${cust.first_name} ${cust.last_name}` : '—'
                 const veh = sr?.vehicle && vehiclesList?.find((v) => v.id === sr.vehicle)
-                const vehicleInfo = veh ? `${veh.make} ${veh.model} (${veh.license_plate})` : 'Parts sale'
+                const vehicleInfo = veh ? `${veh.make} ${veh.model} (${veh.license_plate})` : 'Sales'
                 const dt = invoiceForSr.created_at
                   ? new Date(invoiceForSr.created_at)
                   : new Date()
@@ -753,8 +752,8 @@ export default function ServiceRequestDetailPage() {
                           branchName={siteData?.name ?? '—'}
                           address={siteData?.location}
                           phone={siteData?.contact_number}
-                          receiptNumber={invoiceForSr.id}
-                          invoiceNumber={invoiceForSr.id}
+                          receiptNumber={(invoiceForSr as { display_number?: string }).display_number || invoiceForSr.id}
+                          invoiceNumber={(invoiceForSr as { display_number?: string }).display_number || invoiceForSr.id}
                           dateTime={dtStr}
                           terminalId={String(siteData?.id ?? '—')}
                           items={receiptItems}
@@ -782,10 +781,10 @@ export default function ServiceRequestDetailPage() {
                         branchName={siteData?.name ?? '—'}
                         address={siteData?.location}
                         phone={siteData?.contact_number}
-                        invoiceNumber={invoiceForSr.id}
+                        invoiceNumber={(invoiceForSr as { display_number?: string }).display_number || invoiceForSr.id}
                         invoiceDate={dtStr.split(' - ')[0]}
                         dueDate={dtStr.split(' - ')[0]}
-                        jobRef={`SR#${sr?.id}`}
+                        jobRef={(sr as { display_number?: string })?.display_number || `SR#${sr?.id}`}
                         customerName={custName}
                         customerPhone={cust?.phone_number}
                         customerEmail={cust?.email}
@@ -807,6 +806,25 @@ export default function ServiceRequestDetailPage() {
           )}
         </div>
       </div>
+
+      {/* Complete Sale Modal */}
+      {showCompleteModal && (
+        <CompleteSaleModal
+          isOpen={showCompleteModal}
+          onClose={() => setShowCompleteModal(false)}
+          onComplete={handleCompleteWithModal}
+          items={usageWithNames}
+          laborCost={Number(sr?.labor_cost ?? 0)}
+          currentDiscount={parseFloat(manualDiscount) || 0}
+          currentPromotion={
+            selectedPromotionId 
+              ? promotionsList.find((p: any) => p.id === parseInt(selectedPromotionId, 10))
+              : undefined
+          }
+          promotions={promotionsList}
+          isPartsSale={isPartsSale}
+        />
+      )}
     </div>
   )
 }

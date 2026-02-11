@@ -1,0 +1,106 @@
+/* Invoices list page – filters, table, actions */
+.invoices-page__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.invoices-page__actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.invoices-page__filters {
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.invoices-page__filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-end;
+}
+
+.invoices-page__filter {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.invoices-page__filter label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.invoices-page__filter .select,
+.invoices-page__filter .input {
+  min-width: 140px;
+}
+
+.invoices-page__filter .input[type="date"] {
+  min-width: 140px;
+}
+
+.invoices-page__num {
+  font-variant-numeric: tabular-nums;
+}
+
+.invoices-page__link {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.invoices-page__link:hover {
+  text-decoration: underline;
+}
+
+.invoices-page__cell-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.invoices-page__cell-actions .select--sm {
+  min-width: 90px;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.8rem;
+}
+
+.invoices-page__empty {
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+}
+
+.invoices-page__empty p {
+  margin: 0 0 0.5rem;
+}
+
+.invoices-page__empty-hint {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.invoices-page__empty-hint a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.invoices-page__empty-hint a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 900px) {
+  .invoices-page .table-wrap {
+    overflow-x: auto;
+  }
+
+  .invoices-page .table {
+    min-width: 800px;
+  }
+}

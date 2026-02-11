@@ -69,3 +69,32 @@
   font-size: 0.85em;
   color: var(--text-muted);
 }
+
+.vehicle-detail .page-header--row {
+  flex-wrap: wrap;
+}
+
+.vehicle-detail .page-header__main {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.vehicle-detail .page-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.vehicle-detail__edit-form {
+  margin-bottom: 1.5rem;
+}
+
+.vehicle-detail .btn--danger {
+  background: var(--error-muted);
+  color: var(--error);
+}
+
+.vehicle-detail .btn--danger:hover:not(:disabled) {
+  background: rgba(220, 38, 38, 0.2);
+}

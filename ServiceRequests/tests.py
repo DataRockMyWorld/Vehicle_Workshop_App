@@ -29,6 +29,19 @@ class ServiceRequestAPITestCase(WorkshopAPITestCaseMixin, APITestCase):
             status="Pending",
         )
 
+    def test_service_request_auto_generates_display_number_on_save(self):
+        """ServiceRequest gets SR-YYYY-NNNN display_number when created without one."""
+        sr = ServiceRequest.objects.create(
+            customer=self.customer,
+            vehicle=self.vehicle,
+            site=self.site_a,
+            service_type=self.service_type,
+            description="Test SR",
+            status="Pending",
+        )
+        self.assertTrue(sr.display_number)
+        self.assertRegex(sr.display_number, r"^SR-\d{4}-\d{4}$")
+
     def test_service_request_list_requires_auth(self):
         """Unauthenticated requests get 401."""
         url = reverse("service-request-list")

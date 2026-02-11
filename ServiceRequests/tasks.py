@@ -77,7 +77,7 @@ def notify_mechanic_assignment(service_request_id):
     vehicle_info = (
         f"{vehicle.make} {vehicle.model} ({vehicle.license_plate})"
         if vehicle
-        else "Parts sale (no vehicle)"
+        else "Sales (no vehicle)"
     )
     message = (
         f"Hello {mechanic.name}, you have been assigned a new service request.\n"
@@ -90,15 +90,20 @@ def notify_mechanic_assignment(service_request_id):
 
 def _do_adjust_inventory(service_request_id):
     """
-    Adjusts inventory quantities based on products used in a completed service.
+    Adjusts inventory quantities based on products used in a completed transaction.
     Deducts from Inventory (product + site) and creates InventoryTransaction OUT records.
     Runs inline; use adjust_inventory task for async.
     """
     from Inventories.models import Inventory, InventoryTransaction, TransactionType
 
-    service_request = ServiceRequest.objects.select_related("site").get(id=service_request_id)
+    service_request = ServiceRequest.objects.select_related("site", "customer").get(id=service_request_id)
     site = service_request.site
     product_usages = ProductUsage.objects.select_related("product").filter(service_request=service_request)
+    
+    # Determine entity type for clear audit trail
+    entity_type = "Sale" if service_request.transaction_type == 'sale' else "Service"
+    display_ref = service_request.display_number or f"#{service_request_id}"
+    customer_name = f"{service_request.customer.first_name} {service_request.customer.last_name}"
 
     for usage in product_usages:
         inv = (
@@ -115,13 +120,15 @@ def _do_adjust_inventory(service_request_id):
             )
         inv.quantity_on_hand -= usage.quantity_used
         inv.save(update_fields=["quantity_on_hand"])
+        
+        # Improved audit trail with entity type and customer information
         InventoryTransaction.objects.create(
             inventory=inv,
             transaction_type=TransactionType.OUT,
             quantity=-usage.quantity_used,
             reference_type="product_usage",
             reference_id=usage.id,
-            notes=f"Service request #{service_request_id}",
+            notes=f"{entity_type} {display_ref} - Customer: {customer_name}",
         )
 
 
@@ -177,10 +184,12 @@ def generate_invoice(service_request_id):
     return _do_generate_invoice(service_request_id)
 
 
-def _notify_customer_job_complete(service_request_id):
+def _notify_customer_job_complete(service_request_id, invoice_id=None):
     """
     Notify the customer that their job is complete - vehicle ready for pickup, or parts ready.
+    Includes invoice link in email when invoice_id is provided.
     """
+    from django.conf import settings
     from core.messaging import send_email, send_sms
 
     sr = ServiceRequest.objects.select_related("customer", "vehicle").get(
@@ -188,6 +197,11 @@ def _notify_customer_job_complete(service_request_id):
     )
     c = sr.customer
     v = sr.vehicle
+    base_url = getattr(settings, "APP_BASE_URL", "http://localhost:8000").rstrip("/")
+    invoice_link = ""
+    if invoice_id:
+        invoice_link = f"\n\nView your invoice: {base_url}/api/v1/invoices/{invoice_id}/pdf/"
+
     if v:
         msg = (
             f"Hi {c.first_name}, your vehicle {v.make} {v.model} ({v.license_plate}) "
@@ -196,12 +210,13 @@ def _notify_customer_job_complete(service_request_id):
         subject = f"Your vehicle is ready - {v.make} {v.model}"
         body = (
             f"Hi {c.first_name},\n\n"
-            f"Your vehicle {v.make} {v.model} ({v.license_plate}) is ready for pickup.\n\nThank you."
+            f"Your vehicle {v.make} {v.model} ({v.license_plate}) is ready for pickup."
+            f"{invoice_link}\n\nThank you."
         )
     else:
         msg = f"Hi {c.first_name}, your parts order is ready for pickup. Thank you."
         subject = "Your parts order is ready"
-        body = f"Hi {c.first_name},\n\nYour parts order is ready for pickup.\n\nThank you."
+        body = f"Hi {c.first_name},\n\nYour parts order is ready for pickup.{invoice_link}\n\nThank you."
     send_sms(c.phone_number, msg, context="job_complete")
     email = (c.email or "").strip()
     if email:
@@ -241,7 +256,7 @@ def complete_service(service_request_id, promotion_id=None, discount_amount=None
     except Exception as e:
         logger.exception("Failed to queue invoice notification: %s", e)
     try:
-        _notify_customer_job_complete(service_request_id)
+        _notify_customer_job_complete(service_request_id, invoice_id=invoice.id)
     except Exception as e:
         logger.exception("Failed to send job-complete notification: %s", e)
 

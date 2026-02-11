@@ -1,6 +1,8 @@
 from decimal import Decimal
 
 from django.db import models
+
+from common.models import get_next_display_number
 from Customers.models import Customer
 from Vehicles.models import Vehicle
 from Mechanics.models import Mechanic
@@ -36,6 +38,25 @@ class ServiceType(models.Model):
 
 
 class ServiceRequest(models.Model):
+    TRANSACTION_TYPE_CHOICES = [
+        ('sale', 'Sale'),
+        ('service', 'Service Request'),
+    ]
+    
+    transaction_type = models.CharField(
+        max_length=20,
+        choices=TRANSACTION_TYPE_CHOICES,
+        default='service',
+        db_index=True,
+        help_text="Type of transaction: sale (no vehicle) or service request (with vehicle)"
+    )
+    display_number = models.CharField(
+        max_length=20,
+        unique=True,
+        blank=True,
+        db_index=True,
+        help_text="Human-readable ID, e.g. SALE-2025-0042 or SR-2025-0042",
+    )
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
     vehicle = models.ForeignKey(
         Vehicle,
@@ -55,7 +76,19 @@ class ServiceRequest(models.Model):
     )
     description = models.TextField(help_text="Additional details and notes")
     assigned_mechanic = models.ForeignKey(Mechanic, on_delete=models.SET_NULL, null=True, blank=True)
-    status = models.CharField(max_length=20, choices=[('Pending', 'Pending'), ('In Progress', 'In Progress'), ('Completed', 'Completed')])
+    
+    STATUS_CHOICES = [
+        ('Draft', 'Draft'),                # Being built, can be deleted
+        ('Pending', 'Pending'),            # Awaiting work/payment
+        ('In Progress', 'In Progress'),    # Work in progress
+        ('Completed', 'Completed'),        # Finished and paid
+    ]
+    status = models.CharField(
+        max_length=20, 
+        choices=STATUS_CHOICES,
+        default='Pending',
+        help_text="Current status of the transaction"
+    )
     product_used = models.ManyToManyField(Product, through='ProductUsage')
     labor_cost = models.DecimalField(
         max_digits=10, decimal_places=2, default=Decimal("0"),
@@ -64,9 +97,42 @@ class ServiceRequest(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        if self.vehicle_id:
-            return f"Service Request for {self.vehicle} - {self.status}"
-        return f"Parts sale - {self.status}"
+        entity_type = "Sale" if self.transaction_type == 'sale' else "Service Request"
+        return f"{entity_type} {self.display_number or self.id} - {self.status}"
+
+    def clean(self):
+        """Validate transaction type consistency."""
+        from django.core.exceptions import ValidationError
+        
+        # Auto-determine transaction_type if not set
+        if not self.transaction_type:
+            self.transaction_type = 'sale' if self.vehicle_id is None else 'service'
+        
+        # Validate consistency
+        if self.transaction_type == 'sale':
+            if self.vehicle_id is not None:
+                raise ValidationError("Sales cannot have an associated vehicle.")
+            if self.service_type_id is not None:
+                raise ValidationError("Sales cannot have a service type.")
+            if self.assigned_mechanic_id is not None:
+                raise ValidationError("Sales cannot have an assigned mechanic.")
+            if self.labor_cost and self.labor_cost > 0:
+                raise ValidationError("Sales cannot have labor costs.")
+        elif self.transaction_type == 'service':
+            if self.vehicle_id is None:
+                raise ValidationError("Service requests must have an associated vehicle.")
+
+    def save(self, *args, **kwargs):
+        # Auto-populate transaction_type based on vehicle if not explicitly set
+        if not self.transaction_type:
+            self.transaction_type = 'sale' if self.vehicle_id is None else 'service'
+        
+        # Generate appropriate display number based on type
+        if not self.display_number:
+            prefix = "SALE" if self.transaction_type == 'sale' else "SR"
+            self.display_number = get_next_display_number(prefix, pad=4)
+        
+        super().save(*args, **kwargs)
 
 class ProductUsage(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE)

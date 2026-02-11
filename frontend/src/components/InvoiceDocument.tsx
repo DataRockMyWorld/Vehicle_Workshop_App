@@ -17,12 +17,13 @@ export interface InvoiceLineItem {
 export interface InvoiceDocumentProps {
   businessName?: string
   branchName: string
+  logoUrl?: string
   address?: string
   phone?: string
   email?: string
   website?: string
   tin?: string
-  invoiceNumber: number
+  invoiceNumber: number | string
   invoiceDate: string
   dueDate?: string
   jobRef?: string
@@ -40,6 +41,8 @@ export interface InvoiceDocumentProps {
   paid: boolean
   paymentMethod?: string
   paymentLabels?: Record<string, string>
+  /** Optional: MoMo number, bank account, etc. Shown instead of "As displayed at branch" */
+  bankDetails?: string
 }
 
 const PAYMENT_LABELS: Record<string, string> = {
@@ -51,6 +54,7 @@ const PAYMENT_LABELS: Record<string, string> = {
 export default function InvoiceDocument({
   businessName = 'Feeling Autopart',
   branchName,
+  logoUrl,
   address,
   phone,
   email,
@@ -74,6 +78,7 @@ export default function InvoiceDocument({
   paid,
   paymentMethod,
   paymentLabels = PAYMENT_LABELS,
+  bankDetails,
 }: InvoiceDocumentProps) {
   const methodLabel = paid && paymentMethod
     ? (paymentLabels[paymentMethod] ?? paymentMethod)
@@ -81,6 +86,11 @@ export default function InvoiceDocument({
 
   return (
     <div className="invoice-doc" role="document" aria-label="Invoice">
+      {logoUrl && (
+        <div className="invoice-doc__logo-wrap">
+          <img src={logoUrl} alt="" className="invoice-doc__logo" />
+        </div>
+      )}
       <header className="invoice-doc__header">
         <div className="invoice-doc__brand">
           <h1 className="invoice-doc__business">{businessName}</h1>
@@ -93,7 +103,7 @@ export default function InvoiceDocument({
         </div>
         <div className="invoice-doc__meta">
           <h2 className="invoice-doc__title">INVOICE</h2>
-          <p className="invoice-doc__num">#{invoiceNumber}</p>
+          <p className="invoice-doc__num">{typeof invoiceNumber === 'string' && invoiceNumber.startsWith('INV-') ? invoiceNumber : `#${invoiceNumber}`}</p>
           <p>Invoice date: {invoiceDate}</p>
           {dueDate && <p>Due date: {dueDate}</p>}
           {jobRef && <p>Job ref: {jobRef}</p>}
@@ -136,7 +146,9 @@ export default function InvoiceDocument({
               <td>{item.application ? item.application.split(',')[0].trim().slice(0, 25) : '—'}</td>
               <td className="invoice-doc__num-cell">{item.quantity_used}</td>
               <td className="invoice-doc__num-cell">{formatCurrency(item.unitPrice)}</td>
-              <td className="invoice-doc__num-cell">{vatRate > 0 ? formatCurrency(item.lineTotal * vatRate / 100) : '—'}</td>
+              <td className="invoice-doc__num-cell">
+                {vatRate > 0 ? formatCurrency((item.unitPrice * item.quantity_used * vatRate) / 100) : '—'}
+              </td>
               <td className="invoice-doc__num-cell">{formatCurrency(item.lineTotal)}</td>
             </tr>
           ))}
@@ -180,7 +192,9 @@ export default function InvoiceDocument({
       <div className="invoice-doc__payment">
         <p><strong>Payment:</strong> {methodLabel}</p>
         <p className="invoice-doc__muted">Terms: Immediate</p>
-        <p className="invoice-doc__muted">Bank / MoMo details: As displayed at branch</p>
+        <p className="invoice-doc__muted">
+          {bankDetails || 'Bank / MoMo details: As displayed at branch'}
+        </p>
       </div>
 
       <footer className="invoice-doc__footer">

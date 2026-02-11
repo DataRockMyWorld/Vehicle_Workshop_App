@@ -23,9 +23,22 @@ def _use_twilio():
 
 
 def _format_to(to):
-    """Normalize phone for display/logging. Use E.164 format (e.g. +1234567890) in DB."""
-    s = str(to).strip()
-    return s or "+???"
+    """
+    Normalize phone to E.164 for Twilio (e.g. +233501234567).
+    Handles: 0501234567 -> +233501234567, 233501234567 -> +233501234567.
+    """
+    s = str(to).strip().replace(" ", "").replace("-", "")
+    if not s:
+        return "+???"
+    if s.startswith("+"):
+        return s
+    if s.startswith("00"):
+        return "+" + s[2:]
+    if s.startswith("0") and len(s) >= 10:
+        return "+233" + s[1:]
+    if s.startswith("233") and len(s) >= 12:
+        return "+" + s
+    return "+" + s
 
 
 def send_sms(to, body, context="sms"):

@@ -1,5 +1,6 @@
 from django.db import models
 
+from common.models import get_next_display_number
 from Customers.models import Customer
 from Mechanics.models import Mechanic
 from Site.models import Site
@@ -18,6 +19,13 @@ class AppointmentStatus(models.TextChoices):
 class Appointment(models.Model):
     """Service slot booking with optional mechanic assignment."""
 
+    display_number = models.CharField(
+        max_length=20,
+        unique=True,
+        blank=True,
+        db_index=True,
+        help_text="Human-readable ID, e.g. APT-2025-0042",
+    )
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name="appointments")
     vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE, related_name="appointments")
     site = models.ForeignKey(Site, on_delete=models.CASCADE, related_name="appointments")
@@ -56,4 +64,9 @@ class Appointment(models.Model):
         ordering = ["scheduled_date", "scheduled_time"]
 
     def __str__(self):
-        return f"{self.customer} - {self.scheduled_date} {self.scheduled_time} ({self.get_status_display()})"
+        return f"{self.display_number or self.id} - {self.customer} ({self.scheduled_date})"
+
+    def save(self, *args, **kwargs):
+        if not self.display_number:
+            self.display_number = get_next_display_number("APT", pad=4)
+        super().save(*args, **kwargs)

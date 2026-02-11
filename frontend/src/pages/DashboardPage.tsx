@@ -1,5 +1,16 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import {
+  PieChart,
+  Pie,
+  Cell,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  ResponsiveContainer,
+  Tooltip,
+} from 'recharts'
 import { dashboard, serviceRequests, inventory } from '../api/services'
 import { apiErrorMsg, toList } from '../api/client'
 import { useAuth } from '../context/AuthContext'
@@ -8,6 +19,21 @@ import type { ServiceRequest, StockAlert } from '../types'
 import Loader from '../components/Loader'
 import CEODashboard from './CEODashboard'
 import './DashboardPage.css'
+
+const CHART_COLORS = ['#0d9488', '#f59e0b', '#8b5cf6', '#22c55e', '#3b82f6', '#ec4899', '#64748b']
+
+function ChartLegend({ items }: { items: { name: string; color: string }[] }) {
+  return (
+    <ul className="dashboard__chart-legend">
+      {items.map((item, i) => (
+        <li key={i} className="dashboard__chart-legend-item">
+          <span className="dashboard__chart-legend-dot" style={{ backgroundColor: item.color }} aria-hidden />
+          <span className="dashboard__chart-legend-label">{item.name}</span>
+        </li>
+      ))}
+    </ul>
+  )
+}
 
 interface SalesMetrics {
   revenue_today: string
@@ -18,6 +44,10 @@ interface SalesMetrics {
   sales_count_prev_week: number
   paid_today: string
   unpaid_today: string
+  top_products?: { product_id: number; product_name: string; quantity_sold: number }[]
+  by_service_category?: { category: string; count: number }[]
+  by_payment_method?: { method: string; label: string; revenue: string }[]
+  revenue_mix?: { type: string; label: string; value: string }[]
 }
 
 function TrendBadge({ current, previous }: { current: number; previous: number }) {
@@ -158,7 +188,7 @@ export default function DashboardPage() {
               )}
             </div>
             <span className="dashboard__sales-value dashboard__sales-value--hero">
-              {loading ? '—' : sales ? formatCurrency(parseFloat(sales.revenue_week)) : 'GH₵0.00'}
+              {loading ? '—' : sales ? formatCurrency(parseFloat(sales.revenue_week)) : 'GHC 0.00'}
             </span>
             <span className="dashboard__sales-meta">vs last week</span>
           </div>
@@ -179,18 +209,191 @@ export default function DashboardPage() {
           </div>
           <div className="dashboard__sales-card dashboard__sales-card--compact">
             <span className="dashboard__sales-value dashboard__sales-value--success">
-              {loading ? '—' : sales ? formatCurrency(parseFloat(sales.revenue_today)) : 'GH₵0.00'}
+              {loading ? '—' : sales ? formatCurrency(parseFloat(sales.revenue_today)) : 'GHC 0.00'}
             </span>
             <span className="dashboard__sales-label">Today</span>
           </div>
           <div className="dashboard__sales-card dashboard__sales-card--compact">
             <span className="dashboard__sales-value dashboard__sales-value--muted">
-              {loading ? '—' : sales ? formatCurrency(parseFloat(sales.unpaid_today)) : 'GH₵0.00'}
+              {loading ? '—' : sales ? formatCurrency(parseFloat(sales.unpaid_today)) : 'GHC 0.00'}
             </span>
             <span className="dashboard__sales-label">Unpaid today</span>
           </div>
         </div>
       </section>
+
+      {sales && (sales.top_products?.length || sales.by_service_category?.length || sales.by_payment_method?.length || sales.revenue_mix?.length) ? (
+        <section className="dashboard__infographics">
+          <h2 className="dashboard__section-title">Insights (last 30 days)</h2>
+          <div className="dashboard__charts-grid">
+            {sales.by_payment_method && sales.by_payment_method.length > 0 && (
+              <div className="dashboard__chart-card dashboard__chart-card--pie card">
+                <div className="dashboard__chart-card-inner">
+                  <h3 className="dashboard__chart-title">Revenue by payment method</h3>
+                  <div className="dashboard__chart-body">
+                    <div className="dashboard__chart-wrap dashboard__chart-wrap--donut">
+                      <ResponsiveContainer width="100%" height={180}>
+                        <PieChart margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
+                          <Pie
+                            data={sales.by_payment_method.map((p, i) => ({
+                              name: p.label,
+                              value: parseFloat(p.revenue),
+                              fill: CHART_COLORS[i % CHART_COLORS.length],
+                            }))}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={52}
+                            outerRadius={72}
+                            paddingAngle={3}
+                            dataKey="value"
+                            nameKey="name"
+                          >
+                            {sales.by_payment_method.map((_, i) => (
+                              <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                            ))}
+                          </Pie>
+                          <Tooltip
+                            formatter={(v: number) => formatCurrency(v)}
+                            contentStyle={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <ChartLegend
+                      items={sales.by_payment_method.map((p, i) => ({
+                        name: p.label,
+                        color: CHART_COLORS[i % CHART_COLORS.length],
+                      }))}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+            {sales.by_service_category && sales.by_service_category.length > 0 && (
+              <div className="dashboard__chart-card dashboard__chart-card--pie card">
+                <div className="dashboard__chart-card-inner">
+                  <h3 className="dashboard__chart-title">Services by category</h3>
+                  <div className="dashboard__chart-body">
+                    <div className="dashboard__chart-wrap dashboard__chart-wrap--pie">
+                      <ResponsiveContainer width="100%" height={180}>
+                        <PieChart margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
+                          <Pie
+                            data={sales.by_service_category.map((c, i) => ({
+                              name: c.category,
+                              value: c.count,
+                              fill: CHART_COLORS[i % CHART_COLORS.length],
+                            }))}
+                            cx="50%"
+                            cy="50%"
+                            outerRadius={72}
+                            paddingAngle={3}
+                            dataKey="value"
+                            nameKey="name"
+                          >
+                            {sales.by_service_category.map((_, i) => (
+                              <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                            ))}
+                          </Pie>
+                          <Tooltip
+                            contentStyle={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
+                            formatter={(v: number) => `${v} jobs`}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <ChartLegend
+                      items={sales.by_service_category.map((c, i) => ({
+                        name: c.category,
+                        color: CHART_COLORS[i % CHART_COLORS.length],
+                      }))}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+            {sales.revenue_mix && sales.revenue_mix.some((r) => parseFloat(r.value) > 0) && (
+              <div className="dashboard__chart-card dashboard__chart-card--pie card">
+                <div className="dashboard__chart-card-inner">
+                  <h3 className="dashboard__chart-title">Revenue mix</h3>
+                  <div className="dashboard__chart-body">
+                    <div className="dashboard__chart-wrap dashboard__chart-wrap--donut">
+                      <ResponsiveContainer width="100%" height={180}>
+                        <PieChart margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
+                          <Pie
+                            data={sales.revenue_mix
+                              .filter((r) => parseFloat(r.value) > 0)
+                              .map((r, i) => ({
+                                name: r.label,
+                                value: parseFloat(r.value),
+                                fill: CHART_COLORS[i % CHART_COLORS.length],
+                              }))}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={52}
+                            outerRadius={72}
+                            paddingAngle={3}
+                            dataKey="value"
+                            nameKey="name"
+                          >
+                            {sales.revenue_mix
+                              .filter((r) => parseFloat(r.value) > 0)
+                              .map((_, i) => (
+                                <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                              ))}
+                          </Pie>
+                          <Tooltip
+                            formatter={(v: number) => formatCurrency(v)}
+                            contentStyle={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <ChartLegend
+                      items={sales.revenue_mix
+                        .filter((r) => parseFloat(r.value) > 0)
+                        .map((r, i) => ({
+                          name: r.label,
+                          color: CHART_COLORS[i % CHART_COLORS.length],
+                        }))}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+            {sales.top_products && sales.top_products.length > 0 && (
+              <div className="dashboard__chart-card dashboard__chart-card--wide card">
+                <div className="dashboard__chart-card-inner">
+                  <h3 className="dashboard__chart-title">Top products sold</h3>
+                  <div className="dashboard__chart-wrap dashboard__chart-wrap--bar">
+                  <ResponsiveContainer width="100%" height={Math.max(200, sales.top_products.length * 36)}>
+                    <BarChart
+                      data={sales.top_products.map((p) => ({
+                        name: p.product_name.length > 25 ? p.product_name.slice(0, 24) + '…' : p.product_name,
+                        qty: p.quantity_sold,
+                        fullName: p.product_name,
+                      }))}
+                      layout="vertical"
+                      margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
+                    >
+                      <XAxis type="number" tick={{ fontSize: 11 }} />
+                      <YAxis type="category" dataKey="name" width={120} tick={{ fontSize: 11 }} />
+                      <Tooltip
+                        contentStyle={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
+                        formatter={(v: number, _n: string, props: { payload?: { fullName?: string } }) => [
+                          `${v} sold`,
+                          props.payload?.fullName,
+                        ]}
+                      />
+                      <Bar dataKey="qty" fill="var(--accent)" radius={[0, 4, 4, 0]} name="Qty sold" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+      ) : null}
 
       <section className="dashboard__stats">
         <div className="stat">
@@ -236,7 +439,7 @@ export default function DashboardPage() {
               </Link>
               <Link to="/parts-sale/new" className="dashboard__action-card card">
                 <span className="dashboard__action-icon">+</span>
-                <span className="dashboard__action-label">New parts sale</span>
+                <span className="dashboard__action-label">New sale</span>
               </Link>
             </>
           )}

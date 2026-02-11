@@ -27,7 +27,7 @@ const STATUS_OPTIONS = [
 ]
 
 export default function AppointmentsPage() {
-  const { canWrite, siteId: userSiteId } = useAuth()
+  const { canWrite, canSeeAllSites, siteId: userSiteId } = useAuth()
   const { data: rawData, loading, error, refetch } = useAsyncData(
     () => Promise.all([
       appointments.list(),
@@ -234,11 +234,12 @@ export default function AppointmentsPage() {
             <table className="table">
               <thead>
                 <tr>
+                  <th>Ref</th>
                   <th>Date</th>
                   <th>Time</th>
                   <th>Customer</th>
                   <th>Vehicle</th>
-                  <th>Site</th>
+                  {canSeeAllSites && <th>Site</th>}
                   <th>Mechanic</th>
                   <th>Status</th>
                 </tr>
@@ -246,11 +247,12 @@ export default function AppointmentsPage() {
               <tbody>
                 {paginatedItems.map((a) => (
                   <tr key={a.id}>
+                    <td>{a.display_number || `#${a.id}`}</td>
                     <td>{fmtDate(a.scheduled_date)}</td>
                     <td>{fmtTime(a.scheduled_time)}</td>
                     <td>{cMap[a.customer] ? `${cMap[a.customer].first_name} ${cMap[a.customer].last_name}` : `#${a.customer}`}</td>
                     <td>{vMap[a.vehicle] ? `${vMap[a.vehicle].make} ${vMap[a.vehicle].model}` : `#${a.vehicle}`}</td>
-                    <td>{sMap[a.site] ? sMap[a.site].name : `#${a.site}`}</td>
+                    {canSeeAllSites && <td>{sMap[a.site] ? sMap[a.site].name : `#${a.site}`}</td>}
                     <td>{a.mechanic && mMap[a.mechanic] ? mMap[a.mechanic].name : '—'}</td>
                     <td>
                       <span className={`badge badge--${(a.status || '').replace('_', '-')}`}>

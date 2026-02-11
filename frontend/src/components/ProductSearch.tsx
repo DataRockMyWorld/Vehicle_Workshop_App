@@ -13,17 +13,19 @@ interface ProductSearchProps {
   onChange?: (productId: string) => void
   vehicle?: string
   siteId?: number | null
+  resetTrigger?: number | string
 }
 
 export default function ProductSearch({
   onSelect,
   disabledIds = [],
   getAvailable,
-  placeholder = 'Search by FMSI, position, brand, application…',
+  placeholder = 'Search by name, SKU, FMSI, part #, brand, position, application…',
   value = '',
   onChange,
   vehicle = '',
   siteId = null,
+  resetTrigger = 0,
 }: ProductSearchProps) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<ProductSearchResult[]>([])
@@ -35,10 +37,6 @@ export default function ProductSearch({
   const containerRef = useRef<HTMLDivElement>(null)
 
   const fetchResults = useCallback(async (q: string) => {
-    if (!q.trim() && !vehicle && !siteId) {
-      setResults([])
-      return
-    }
     setLoading(true)
     try {
       const data = await products.search(q.trim(), 15, { vehicle, siteId: siteId != null ? String(siteId) : '' })
@@ -53,15 +51,10 @@ export default function ProductSearch({
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
-    if (!query.trim() && !vehicle && !siteId) {
-      setResults([])
-      setOpen(false)
-      return
-    }
     debounceRef.current = setTimeout(() => {
       fetchResults(query)
       setOpen(true)
-    }, 220)
+    }, query.trim() ? 220 : 0)
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current)
     }
@@ -118,6 +111,16 @@ export default function ProductSearch({
     return () => document.removeEventListener('mousedown', onClickOutside)
   }, [])
 
+  // Reset when resetTrigger changes (e.g., after adding item)
+  useEffect(() => {
+    if (resetTrigger) {
+      setQuery('')
+      setSelectedProduct(null)
+      setOpen(false)
+      setResults([])
+    }
+  }, [resetTrigger])
+
   return (
     <div className="product-search" ref={containerRef}>
       <div className="product-search__input-wrap">
@@ -126,7 +129,13 @@ export default function ProductSearch({
           className="input product-search__input"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          onFocus={() => query.trim() && results.length > 0 && setOpen(true)}
+          onFocus={() => {
+            if (results.length > 0) setOpen(true)
+            else if (!query.trim()) {
+              setOpen(true)
+              fetchResults('')
+            }
+          }}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           autoComplete="off"
@@ -187,7 +196,7 @@ export default function ProductSearch({
           })}
         </ul>
       )}
-      {open && query.trim() && !loading && results.length === 0 && (
+      {open && !loading && results.length === 0 && (
         <div className="product-search__empty">No products found</div>
       )}
     </div>
