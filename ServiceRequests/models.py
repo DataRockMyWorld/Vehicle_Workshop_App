@@ -74,7 +74,7 @@ class ServiceRequest(models.Model):
         related_name="service_requests",
         help_text="Category and type of service (e.g. Mechanical — Brake Repair)",
     )
-    description = models.TextField(help_text="Additional details and notes")
+    description = models.TextField(blank=True, default='', help_text="Additional details and notes")
     assigned_mechanic = models.ForeignKey(Mechanic, on_delete=models.SET_NULL, null=True, blank=True)
     
     STATUS_CHOICES = [

@@ -6,7 +6,6 @@ import { apiErrorMsg, toList } from '../api/client'
 import { buildLookups } from '../utils/lookups'
 import { usePagination } from '../hooks/usePagination'
 import Pagination from '../components/Pagination'
-import QuickSaleModal from '../components/QuickSaleModal'
 import type { Customer, Vehicle, Site, ServiceRequest } from '../types'
 import Loader from '../components/Loader'
 import './PartsSalePage.css'
@@ -15,45 +14,28 @@ const STATUS_OPTIONS = ['', 'Draft', 'Pending', 'In Progress', 'Completed']
 
 export default function PartsSalePage() {
   const navigate = useNavigate()
-  const { canWrite, canSeeAllSites, siteId: userSiteId } = useAuth()
+  const { canWrite, canSeeAllSites } = useAuth()
   const [requests, setRequests] = useState<ServiceRequest[]>([])
   const [customersList, setCustomersList] = useState<Customer[]>([])
-  const [walkinCustomer, setWalkinCustomer] = useState<{ id: number } | null>(null)
   const [sitesList, setSitesList] = useState<Site[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<unknown>(null)
   const [statusFilter, setStatusFilter] = useState('')
-  const [showQuickSale, setShowQuickSale] = useState(false)
 
   useEffect(() => {
     Promise.all([
       serviceRequests.list({ parts_only: true }),
       customers.list(),
-      customers.walkin(),
       sites.list(),
     ])
-      .then(([r, c, walkin, s]) => {
+      .then(([r, c, s]) => {
         setRequests(toList(r) as ServiceRequest[])
         setCustomersList(toList(c) as Customer[])
-        setWalkinCustomer(walkin as { id: number })
         setSitesList(toList(s) as Site[])
       })
       .catch(setError)
       .finally(() => setLoading(false))
   }, [])
-
-  useEffect(() => {
-    // Keyboard shortcut for quick sale (Ctrl+N)
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.key === 'n' && canWrite && walkinCustomer) {
-        e.preventDefault()
-        setShowQuickSale(true)
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [canWrite, walkinCustomer])
 
   const lk = useMemo(() => buildLookups(customersList, [] as Vehicle[], sitesList), [customersList, sitesList])
   const list = requests
@@ -83,29 +65,12 @@ export default function PartsSalePage() {
         <h1 className="page-title">Sales</h1>
         {canWrite && (
           <div className="page-header__actions">
-            <button
-              className="btn btn--success"
-              onClick={() => setShowQuickSale(true)}
-              disabled={!walkinCustomer || !userSiteId}
-              title="Quick sale for walk-in customer (Ctrl+N)"
-            >
-              ⚡ Quick Sale
-            </button>
             <Link to="/parts-sale/new" className="btn btn--primary">
               New sale
             </Link>
           </div>
         )}
       </div>
-
-      {showQuickSale && walkinCustomer && userSiteId && (
-        <QuickSaleModal
-          isOpen={showQuickSale}
-          onClose={() => setShowQuickSale(false)}
-          walkinCustomerId={walkinCustomer.id}
-          siteId={userSiteId}
-        />
-      )}
 
       <div className="parts-sale__bar">
         <label className="parts-sale__filter">
@@ -146,13 +111,13 @@ export default function PartsSalePage() {
                   <tr
                     key={r.id}
                     data-clickable
-                    onClick={() => navigate(`/service-requests/${r.id}`)}
+                    onClick={() => navigate(`/sales/${r.id}`)}
                     role="button"
                     tabIndex={0}
-                    onKeyDown={(e) => e.key === 'Enter' && navigate(`/service-requests/${r.id}`)}
+                    onKeyDown={(e) => e.key === 'Enter' && navigate(`/sales/${r.id}`)}
                   >
                     <td>
-                      <Link to={`/service-requests/${r.id}`} className="parts-sale__link" onClick={(e) => e.stopPropagation()}>
+                      <Link to={`/sales/${r.id}`} className="parts-sale__link" onClick={(e) => e.stopPropagation()}>
                         {(r as { display_number?: string }).display_number ?? `#${r.id}`}
                       </Link>
                     </td>

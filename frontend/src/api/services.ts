@@ -119,16 +119,6 @@ export const products = {
   },
 }
 
-export const appointments = {
-  list: (page?: number) => api(page ? `appointments/?page=${page}` : 'appointments/'),
-  get: (id: number | string) => api(`appointments/${id}/`),
-  create: (body: Record<string, unknown>) => api('appointments/', { method: 'POST', body: JSON.stringify(body) }),
-  update: (id: number | string, body: Record<string, unknown>) => api(`appointments/${id}/`, { method: 'PATCH', body: JSON.stringify(body) }),
-  delete: (id: number | string) => api(`appointments/${id}/`, { method: 'DELETE' }),
-  availability: (mechanicId: number | string, date: string, siteId: number | string) =>
-    api(`appointments/availability/?mechanic_id=${mechanicId}&date=${date}&site_id=${siteId}`),
-}
-
 export const inventory = {
   list: (params?: {
     page?: number
@@ -198,6 +188,20 @@ export const invoices = {
 
 export const promotions = {
   active: () => api('promotions/active/'),
+  list: () => api('promotions/'),
+  get: (id: number | string) => api(`promotions/${id}/`),
+  create: (body: Record<string, unknown>) => api('promotions/', { method: 'POST', body: JSON.stringify(body) }),
+  update: (id: number | string, body: Record<string, unknown>) => api(`promotions/${id}/`, { method: 'PATCH', body: JSON.stringify(body) }),
+  delete: (id: number | string) => api(`promotions/${id}/`, { method: 'DELETE' }),
+  smsBlastPreview: (id: number | string, params: { audience?: string; site_id?: number }) => {
+    const sp = new URLSearchParams()
+    if (params.audience) sp.set('audience', params.audience)
+    if (params.site_id != null) sp.set('site_id', String(params.site_id))
+    return api(`promotions/${id}/sms-blast-preview/?${sp}`) as Promise<{ total_count: number }>
+  },
+  smsBlast: (id: number | string, body: { message: string; audience?: string; site_id?: number }) =>
+    api(`promotions/${id}/sms-blast/`, { method: 'POST', body: JSON.stringify(body) }),
+  smsHistory: () => api('promotions/sms-history/'),
 }
 
 export const audit = {

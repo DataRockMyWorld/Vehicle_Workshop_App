@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { vehicles, customers, sites } from '../api/services'
 import { useAuth } from '../context/AuthContext'
+import { useUnsavedChanges } from '../hooks/useUnsavedChanges'
+import UnsavedChangesModal from '../components/UnsavedChangesModal'
 import { apiErrorMsg, toList } from '../api/client'
 import { usePaginatedList } from '../hooks/usePaginatedList'
 import { useAsyncData } from '../hooks/useAsyncData'
@@ -12,7 +14,7 @@ import { CAR_MAKES, getModelsForMake } from '../data/carMakesModels'
 import './GenericListPage.css'
 
 export default function VehiclesPage() {
-  const { canWrite, canSeeAllSites, siteId } = useAuth()
+  const { canWrite, canSeeAllSites, siteId: userSiteId } = useAuth()
   const { items: list, count, loading, error, page, setPage, totalPages, pageSize, refetch } = usePaginatedList(
     (p) => vehicles.list(p),
     []
@@ -33,11 +35,14 @@ export default function VehiclesPage() {
   const [model, setModel] = useState('')
   const [year, setYear] = useState('')
   const [license_plate, setLicense_plate] = useState('')
-  const [site, setSite] = useState(siteId ? String(siteId) : '')
+  const [site, setSite] = useState(userSiteId ? String(userSiteId) : '')
   const [service_interval_days, setService_interval_days] = useState('')
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const { showWarning, confirmNavigation, cancelNavigation } = useUnsavedChanges(hasUnsavedChanges)
+
   useEffect(() => {
-    if (siteId) setSite(String(siteId))
-  }, [siteId])
+    if (userSiteId) setSite(String(userSiteId))
+  }, [userSiteId])
 
   const byId = (arr, id) => (arr || []).find((x) => x.id === parseInt(id, 10))
   const name = (id) => {
@@ -49,13 +54,13 @@ export default function VehiclesPage() {
     return s ? s.name : `#${id}`
   }
 
+  const effectiveSite = canSeeAllSites ? (site ? parseInt(site, 10) : null) : userSiteId
   const handleSubmit = async (e) => {
     e.preventDefault()
     setFormError('')
     const y = parseInt(year, 10)
-    const effectiveSite = siteId ? siteId : (site ? parseInt(site, 10) : null)
     if (!customer || !make.trim() || !model.trim() || !license_plate.trim() || !effectiveSite) {
-      setFormError('Customer, make, model, license plate, and site are required.')
+      setFormError(canSeeAllSites ? 'Customer, make, model, license plate, and site are required.' : 'Customer, make, model, and license plate are required.')
       return
     }
     if (!year.trim() || isNaN(y) || y < 1900 || y > 2100) {
@@ -78,8 +83,9 @@ export default function VehiclesPage() {
       setModel('')
       setYear('')
       setLicense_plate('')
-      setSite(siteId ? String(siteId) : '')
+      setSite(userSiteId ? String(userSiteId) : '')
       setService_interval_days('')
+      setHasUnsavedChanges(false)
       setShowForm(false)
       load()
     } catch (e) {
@@ -91,13 +97,18 @@ export default function VehiclesPage() {
 
   return (
     <div className="generic-list">
+      <UnsavedChangesModal
+        isOpen={showWarning}
+        onConfirm={confirmNavigation}
+        onCancel={cancelNavigation}
+      />
       <div className="page-header">
         <h1 className="page-title">Vehicles</h1>
         {canWrite && (
           <button
             type="button"
             className="btn btn--primary"
-            onClick={() => setShowForm(!showForm)}
+            onClick={() => { if (showForm) setHasUnsavedChanges(false); setShowForm(!showForm); }}
             aria-expanded={showForm}
           >
             {showForm ? 'Cancel' : 'Add vehicle'}
@@ -106,7 +117,7 @@ export default function VehiclesPage() {
       </div>
 
       {showForm && (
-        <form className="form-card card" onSubmit={handleSubmit}>
+        <form className="form-card card" onSubmit={handleSubmit} onChange={() => setHasUnsavedChanges(true)}>
           <h2 className="form-card__title">New vehicle</h2>
           {formError && <div className="form-card__error" role="alert">{formError}</div>}
           <div className="form-card__grid">
@@ -127,29 +138,21 @@ export default function VehiclesPage() {
                 ))}
               </select>
             </div>
-            {!siteId && (
-            <div className="form-group">
-              <label className="label" htmlFor="veh-site">Site</label>
-              <select
-                id="veh-site"
-                className="select"
-                value={site}
-                onChange={(e) => setSite(e.target.value)}
-                required
-              >
-                <option value="">Select site</option>
-                {(sitesList || []).map((s) => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </select>
-            </div>
-            )}
-            {siteId && (
+            {canSeeAllSites && (
               <div className="form-group">
-                <label className="label">Site</label>
-                <div className="input input--readonly">
-                  {sitesList.find((s) => s.id === siteId)?.name ?? `Site #${siteId}`}
-                </div>
+                <label className="label" htmlFor="veh-site">Site</label>
+                <select
+                  id="veh-site"
+                  className="select"
+                  value={site}
+                  onChange={(e) => setSite(e.target.value)}
+                  required
+                >
+                  <option value="">Select site</option>
+                  {(sitesList || []).map((s) => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
               </div>
             )}
             <div className="form-group">
@@ -260,7 +263,7 @@ export default function VehiclesPage() {
             </div>
           </div>
           <div className="form-card__actions">
-            <button type="button" className="btn btn--secondary" onClick={() => setShowForm(false)}>
+            <button type="button" className="btn btn--secondary" onClick={() => { setHasUnsavedChanges(false); setShowForm(false); }}>
               Cancel
             </button>
             <button type="submit" className="btn btn--primary" disabled={submitting}>

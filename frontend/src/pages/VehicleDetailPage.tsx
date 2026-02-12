@@ -4,6 +4,8 @@ import { vehicles, customers, serviceRequests, sites, mechanics } from '../api/s
 import { apiErrorMsg, toList } from '../api/client'
 import Loader from '../components/Loader'
 import { useAuth } from '../context/AuthContext'
+import { useUnsavedChanges } from '../hooks/useUnsavedChanges'
+import UnsavedChangesModal from '../components/UnsavedChangesModal'
 import { CAR_MAKES, getModelsForMake } from '../data/carMakesModels'
 import './VehicleDetailPage.css'
 
@@ -27,7 +29,7 @@ function fmtDate(d) {
 export default function VehicleDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { canWrite, canSeeAllSites, siteId } = useAuth()
+  const { canWrite, canSeeAllSites, siteId: userSiteId } = useAuth()
   const [vehicle, setVehicle] = useState(null)
   const [history, setHistory] = useState([])
   const [customersList, setCustomersList] = useState([])
@@ -48,6 +50,8 @@ export default function VehicleDetailPage() {
   const [submitting, setSubmitting] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const { showWarning, confirmNavigation, cancelNavigation } = useUnsavedChanges(hasUnsavedChanges)
 
   const loadData = useCallback(() => {
     if (!id) return
@@ -89,13 +93,13 @@ export default function VehicleDetailPage() {
 
   const lk = buildLookups(customersList, sitesList, mechanicsList)
 
+  const effectiveSite = canSeeAllSites ? (editSite ? parseInt(editSite, 10) : null) : userSiteId
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setFormError('')
     const y = parseInt(editYear, 10)
-    const effectiveSite = siteId ? siteId : (editSite ? parseInt(editSite, 10) : null)
     if (!editCustomer || !editMake.trim() || !editModel.trim() || !editLicensePlate.trim() || !effectiveSite) {
-      setFormError('Customer, make, model, license plate, and site are required.')
+      setFormError(canSeeAllSites ? 'Customer, make, model, license plate, and site are required.' : 'Customer, make, model, and license plate are required.')
       return
     }
     if (!editYear.trim() || isNaN(y) || y < 1900 || y > 2100) {
@@ -114,6 +118,7 @@ export default function VehicleDetailPage() {
         last_serviced: editLastServiced || null,
         service_interval_days: editServiceIntervalDays ? parseInt(editServiceIntervalDays, 10) : null,
       })
+      setHasUnsavedChanges(false)
       setShowEditForm(false)
       loadData()
     } catch (e) {
@@ -168,6 +173,11 @@ export default function VehicleDetailPage() {
 
   return (
     <div className="vehicle-detail">
+      <UnsavedChangesModal
+        isOpen={showWarning}
+        onConfirm={confirmNavigation}
+        onCancel={cancelNavigation}
+      />
       <div className="page-header page-header--row">
         <div className="page-header__main">
           <Link to="/vehicles" className="btn btn--ghost">← Vehicles</Link>
@@ -210,7 +220,7 @@ export default function VehicleDetailPage() {
       </div>
 
       {showEditForm && canWrite && (
-        <form className="form-card card vehicle-detail__edit-form" onSubmit={handleEditSubmit}>
+        <form className="form-card card vehicle-detail__edit-form" onSubmit={handleEditSubmit} onChange={() => setHasUnsavedChanges(true)}>
           <h2 className="vehicle-detail__card-title">Edit vehicle</h2>
           {formError && <p className="form-card__error" role="alert">{formError}</p>}
           <div className="form-card__grid">
@@ -231,7 +241,7 @@ export default function VehicleDetailPage() {
                 ))}
               </select>
             </div>
-            {!siteId && (
+            {canSeeAllSites && (
               <div className="form-group">
                 <label className="label" htmlFor="edit-site">Site</label>
                 <select
@@ -246,14 +256,6 @@ export default function VehicleDetailPage() {
                     <option key={s.id} value={s.id}>{s.name}</option>
                   ))}
                 </select>
-              </div>
-            )}
-            {siteId && (
-              <div className="form-group">
-                <label className="label">Site</label>
-                <div className="input input--readonly">
-                  {sitesList.find((s) => s.id === siteId)?.name ?? `Site #${siteId}`}
-                </div>
               </div>
             )}
             <div className="form-group">
@@ -374,7 +376,7 @@ export default function VehicleDetailPage() {
             </div>
           </div>
           <div className="form-card__actions">
-            <button type="button" className="btn btn--secondary" onClick={() => { setShowEditForm(false); setFormError(''); setConfirmDelete(false); }}>
+            <button type="button" className="btn btn--secondary" onClick={() => { setHasUnsavedChanges(false); setShowEditForm(false); setFormError(''); setConfirmDelete(false); }}>
               Cancel
             </button>
             <button type="submit" className="btn btn--primary" disabled={submitting}>

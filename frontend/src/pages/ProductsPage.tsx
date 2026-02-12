@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, useMemo } from 'react'
+import { Navigate } from 'react-router-dom'
 import { products, inventory, sites } from '../api/services'
 import { useAuth } from '../context/AuthContext'
 import { apiErrorMsg, toList } from '../api/client'
@@ -32,7 +33,8 @@ const CATEGORY_LABELS = Object.fromEntries(CATEGORIES.map((c) => [c.value, c.lab
 const UNIT_LABELS = Object.fromEntries(UNITS.map((u) => [u.value, u.label]))
 
 export default function ProductsPage() {
-  const { isSuperuser } = useAuth()
+  const { isSuperuser, canSeeAllSites } = useAuth()
+  if (!canSeeAllSites) return <Navigate to="/" replace />
   const { data: rawList, loading, error, refetch } = useAsyncData(() => products.list(), [])
   const list = rawList ? toList(rawList) : []
   const load = useCallback(() => refetch(), [refetch])

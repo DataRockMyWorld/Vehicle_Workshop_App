@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { mechanics, sites } from '../api/services'
 import { useAuth } from '../context/AuthContext'
+import { useUnsavedChanges } from '../hooks/useUnsavedChanges'
+import UnsavedChangesModal from '../components/UnsavedChangesModal'
 import { apiErrorMsg, toList } from '../api/client'
 import { usePaginatedList } from '../hooks/usePaginatedList'
 import { useAsyncData } from '../hooks/useAsyncData'
@@ -10,7 +12,7 @@ import PageError from '../components/PageError'
 import './GenericListPage.css'
 
 export default function MechanicsPage() {
-  const { canWrite, siteId: userSiteId } = useAuth()
+  const { canWrite, canSeeAllSites, siteId: userSiteId } = useAuth()
   const { items: list, count, loading, error, page, setPage, totalPages, pageSize, refetch } = usePaginatedList(
     (p) => mechanics.list(p),
     []
@@ -24,10 +26,14 @@ export default function MechanicsPage() {
   const [name, setName] = useState('')
   const [phone_number, setPhone_number] = useState('')
   const [site, setSite] = useState(userSiteId ? String(userSiteId) : '')
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const { showWarning, confirmNavigation, cancelNavigation } = useUnsavedChanges(hasUnsavedChanges)
+
   useEffect(() => {
     if (userSiteId) setSite(String(userSiteId))
   }, [userSiteId])
 
+  const effectiveSite = canSeeAllSites ? (site ? parseInt(site, 10) : null) : userSiteId
   const byId = (arr, id) => (arr || []).find((x) => x.id === parseInt(id, 10))
   const siteName = (id) => {
     const s = byId(sitesList, id)
@@ -37,8 +43,12 @@ export default function MechanicsPage() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setFormError('')
-    if (!name.trim() || !site) {
-      setFormError('Name and site are required.')
+    if (!name.trim()) {
+      setFormError('Name is required.')
+      return
+    }
+    if (!effectiveSite) {
+      setFormError(canSeeAllSites ? 'Please select a site.' : 'No site assigned. Contact your administrator.')
       return
     }
     setSubmitting(true)
@@ -46,11 +56,12 @@ export default function MechanicsPage() {
       await mechanics.create({
         name: name.trim(),
         phone_number: phone_number.trim() || '',
-        site: parseInt(site, 10),
+        site: effectiveSite,
       })
       setName('')
       setPhone_number('')
       setSite(userSiteId ? String(userSiteId) : '')
+      setHasUnsavedChanges(false)
       setShowForm(false)
       load()
     } catch (e) {
@@ -62,6 +73,11 @@ export default function MechanicsPage() {
 
   return (
     <div className="generic-list">
+      <UnsavedChangesModal
+        isOpen={showWarning}
+        onConfirm={confirmNavigation}
+        onCancel={cancelNavigation}
+      />
       <div className="page-header">
         <h1 className="page-title">Mechanics</h1>
         {canWrite && (
@@ -77,7 +93,7 @@ export default function MechanicsPage() {
       </div>
 
       {showForm && (
-        <form className="form-card card" onSubmit={handleSubmit}>
+        <form className="form-card card" onSubmit={handleSubmit} onChange={() => setHasUnsavedChanges(true)}>
           <h2 className="form-card__title">New mechanic</h2>
           {formError && <div className="form-card__error" role="alert">{formError}</div>}
           <div className="form-card__grid">
@@ -101,11 +117,9 @@ export default function MechanicsPage() {
                 onChange={(e) => setPhone_number(e.target.value)}
               />
             </div>
-            <div className="form-group">
-              <label className="label">Site</label>
-              {userSiteId ? (
-                <div className="form-readonly">{sitesList.find((s) => s.id === userSiteId)?.name ?? `Site #${userSiteId}`}</div>
-              ) : (
+            {canSeeAllSites && (
+              <div className="form-group">
+                <label className="label">Site</label>
                 <select
                   id="mec-site"
                   className="select"
@@ -118,11 +132,11 @@ export default function MechanicsPage() {
                     <option key={s.id} value={s.id}>{s.name}</option>
                   ))}
                 </select>
-              )}
-            </div>
+              </div>
+            )}
           </div>
           <div className="form-card__actions">
-            <button type="button" className="btn btn--secondary" onClick={() => setShowForm(false)}>
+            <button type="button" className="btn btn--secondary" onClick={() => { setHasUnsavedChanges(false); setShowForm(false); }}>
               Cancel
             </button>
             <button type="submit" className="btn btn--primary" disabled={submitting}>

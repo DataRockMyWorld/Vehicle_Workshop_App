@@ -4,6 +4,8 @@ import { customers, serviceRequests, vehicles, sites, mechanics } from '../api/s
 import { apiErrorMsg, toList } from '../api/client'
 import Loader from '../components/Loader'
 import { useAuth } from '../context/AuthContext'
+import { useUnsavedChanges } from '../hooks/useUnsavedChanges'
+import UnsavedChangesModal from '../components/UnsavedChangesModal'
 import './CustomerDetailPage.css'
 
 function buildLookups(vehicles, sites, mechanics) {
@@ -44,6 +46,8 @@ export default function CustomerDetailPage() {
   const [submitting, setSubmitting] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const { showWarning, confirmNavigation, cancelNavigation } = useUnsavedChanges(hasUnsavedChanges)
 
   const loadData = useCallback(() => {
     if (!id) return
@@ -99,6 +103,7 @@ export default function CustomerDetailPage() {
         phone_number: editPhone.trim(),
         receive_service_reminders: editReminders,
       })
+      setHasUnsavedChanges(false)
       setShowEditForm(false)
       loadData()
     } catch (e) {
@@ -153,6 +158,11 @@ export default function CustomerDetailPage() {
 
   return (
     <div className="customer-detail">
+      <UnsavedChangesModal
+        isOpen={showWarning}
+        onConfirm={confirmNavigation}
+        onCancel={cancelNavigation}
+      />
       <div className="page-header page-header--row">
         <div className="page-header__main">
           <Link to="/customers" className="btn btn--ghost">← Customers</Link>
@@ -195,7 +205,7 @@ export default function CustomerDetailPage() {
       </div>
 
       {showEditForm && canWrite && (
-        <form className="form-card card customer-detail__edit-form" onSubmit={handleEditSubmit}>
+        <form className="form-card card customer-detail__edit-form" onSubmit={handleEditSubmit} onChange={() => setHasUnsavedChanges(true)}>
           <h2 className="customer-detail__card-title">Edit customer</h2>
           {formError && <p className="form-card__error" role="alert">{formError}</p>}
           <div className="form-card__grid">
@@ -252,7 +262,7 @@ export default function CustomerDetailPage() {
             </div>
           </div>
           <div className="form-card__actions">
-            <button type="button" className="btn btn--secondary" onClick={() => { setShowEditForm(false); setFormError(''); setConfirmDelete(false); }}>
+            <button type="button" className="btn btn--secondary" onClick={() => { setHasUnsavedChanges(false); setShowEditForm(false); setFormError(''); setConfirmDelete(false); }}>
               Cancel
             </button>
             <button type="submit" className="btn btn--primary" disabled={submitting}>

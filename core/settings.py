@@ -78,7 +78,6 @@ INSTALLED_APPS = [
     "Inventories.apps.InventoriesConfig",
     "Products.apps.ProductsConfig",
     "ServiceRequests.apps.ServiceRequestsConfig",
-    "Appointments.apps.AppointmentsConfig",
     "audit.apps.AuditConfig",
     "Site.apps.SiteConfig",
     "Promotions.apps.PromotionsConfig",

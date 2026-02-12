@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { inventory, sites } from '../api/services'
 import { useAuth } from '../context/AuthContext'
+import { useUnsavedChanges } from '../hooks/useUnsavedChanges'
+import UnsavedChangesModal from '../components/UnsavedChangesModal'
 import { apiErrorMsg, toList } from '../api/client'
 import { usePaginatedList } from '../hooks/usePaginatedList'
 import { useAsyncData } from '../hooks/useAsyncData'
@@ -135,6 +137,8 @@ export default function InventoryPage() {
   const [reorder_level, setReorder_level] = useState('')
   const [reorder_quantity, setReorder_quantity] = useState('')
   const [bin_location, setBin_location] = useState('')
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const { showWarning, confirmNavigation, cancelNavigation } = useUnsavedChanges(hasUnsavedChanges)
 
   useEffect(() => {
     if (userSiteId) setSiteId(String(userSiteId))
@@ -146,15 +150,20 @@ export default function InventoryPage() {
     const qty = parseInt(quantity_on_hand, 10)
     const rl = parseInt(reorder_level, 10) || 0
     const rq = parseInt(reorder_quantity, 10) || 0
-    if (!productId || !siteId || isNaN(qty) || qty < 0) {
-      setFormError('Product, site, and quantity on hand are required.')
+    const formSiteId = canSeeAllSites ? (siteId ? parseInt(siteId, 10) : null) : userSiteId
+    if (!productId || isNaN(qty) || qty < 0) {
+      setFormError('Product and quantity on hand are required.')
+      return
+    }
+    if (!formSiteId) {
+      setFormError(canSeeAllSites ? 'Please select a site.' : 'No site assigned. Contact your administrator.')
       return
     }
     setSubmitting(true)
     try {
       await inventory.create({
         product: parseInt(productId, 10),
-        site: parseInt(siteId, 10),
+        site: formSiteId,
         quantity_on_hand: qty,
         quantity_reserved: 0,
         reorder_level: rl,
@@ -167,6 +176,7 @@ export default function InventoryPage() {
       setReorder_level('')
       setReorder_quantity('')
       setBin_location('')
+      setHasUnsavedChanges(false)
       setShowForm(false)
       load()
     } catch (e) {
@@ -186,13 +196,18 @@ export default function InventoryPage() {
 
   return (
     <div className="generic-list inventory-page">
+      <UnsavedChangesModal
+        isOpen={showWarning}
+        onConfirm={confirmNavigation}
+        onCancel={cancelNavigation}
+      />
       <div className="page-header">
         <h1 className="page-title">Inventory</h1>
         {canWrite && (
           <button
             type="button"
             className="btn btn--primary"
-            onClick={() => setShowForm(!showForm)}
+            onClick={() => { if (showForm) setHasUnsavedChanges(false); setShowForm(!showForm); }}
             aria-expanded={showForm}
           >
             {showForm ? 'Cancel' : 'Add inventory'}
@@ -201,7 +216,7 @@ export default function InventoryPage() {
       </div>
 
       {showForm && (
-        <form className="form-card card" onSubmit={handleSubmit}>
+        <form className="form-card card" onSubmit={handleSubmit} onChange={() => setHasUnsavedChanges(true)}>
           <h2 className="form-card__title">New inventory record</h2>
           {formError && (
             <div className="form-card__error" role="alert">
@@ -215,16 +230,12 @@ export default function InventoryPage() {
                 placeholder="Search by FMSI, position, brand, application…"
                 onSelect={(p) => setProductId(p ? String(p.id) : '')}
                 onChange={(id) => setProductId(id || '')}
-                siteId={siteId ? parseInt(siteId, 10) : null}
+                siteId={canSeeAllSites ? (siteId ? parseInt(siteId, 10) : null) : userSiteId ?? null}
               />
             </div>
-            <div className="form-group">
-              <label className="label">Site</label>
-              {userSiteId ? (
-                <div className="form-readonly">
-                  {sitesArr.find((s) => s.id === userSiteId)?.name ?? `Site #${userSiteId}`}
-                </div>
-              ) : (
+            {canSeeAllSites && (
+              <div className="form-group">
+                <label className="label">Site</label>
                 <select
                   id="inv-site"
                   className="select"
@@ -239,8 +250,8 @@ export default function InventoryPage() {
                     </option>
                   ))}
                 </select>
-              )}
-            </div>
+              </div>
+            )}
             <div className="form-group">
               <label className="label" htmlFor="inv-qty">
                 Quantity on hand
@@ -297,7 +308,7 @@ export default function InventoryPage() {
             </div>
           </div>
           <div className="form-card__actions">
-            <button type="button" className="btn btn--secondary" onClick={() => setShowForm(false)}>
+            <button type="button" className="btn btn--secondary" onClick={() => { setHasUnsavedChanges(false); setShowForm(false); }}>
               Cancel
             </button>
             <button type="submit" className="btn btn--primary" disabled={submitting}>
@@ -333,7 +344,7 @@ export default function InventoryPage() {
             </div>
 
             <div className="inventory-filters">
-              {!userSiteId && (
+              {canSeeAllSites && (
                 <label className="inventory-filters__item">
                   <span className="label">Site</span>
                   <select

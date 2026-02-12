@@ -1,0 +1,141 @@
+.launchpad {
+  min-height: calc(100vh - 8rem);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1.5rem;
+}
+
+.launchpad__content {
+  width: 100%;
+  max-width: 56rem;
+  text-align: center;
+}
+
+.launchpad__title {
+  margin: 0 0 0.5rem;
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--text);
+}
+
+.launchpad__subtitle {
+  margin: 0 0 3rem;
+  font-size: 1rem;
+  color: var(--text-muted);
+}
+
+.launchpad__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 1.5rem;
+  justify-items: center;
+}
+
+.launchpad__card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  max-width: 18rem;
+  padding: 2.5rem 2rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  text-decoration: none;
+  color: var(--text);
+  transition: all 0.25s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  position: relative;
+  overflow: hidden;
+}
+
+.launchpad__card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 2px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+}
+
+.launchpad__card:hover,
+.launchpad__card:focus-visible {
+  transform: translateY(-4px);
+  border-color: var(--accent);
+  box-shadow:
+    0 12px 24px -8px rgba(255, 107, 53, 0.25),
+    0 0 0 1px var(--accent),
+    0 0 40px -8px rgba(255, 107, 53, 0.4);
+}
+
+.launchpad__card:hover::before,
+.launchpad__card:focus-visible::before {
+  opacity: 1;
+}
+
+.launchpad__card:active {
+  transform: translateY(-2px);
+}
+
+.launchpad__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 4rem;
+  height: 4rem;
+  padding: 0.75rem;
+  background: var(--accent-muted);
+  color: var(--accent);
+  border-radius: var(--radius);
+  transition: all 0.25s ease;
+}
+
+.launchpad__card:hover .launchpad__icon,
+.launchpad__card:focus-visible .launchpad__icon {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 0 24px rgba(255, 107, 53, 0.5);
+}
+
+.launchpad__icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.launchpad__label {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.launchpad__desc {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+@media (max-width: 640px) {
+  .launchpad__title {
+    font-size: 1.5rem;
+  }
+
+  .launchpad__grid {
+    grid-template-columns: 1fr;
+    max-width: 20rem;
+    margin: 0 auto;
+  }
+
+  .launchpad__card {
+    max-width: none;
+  }
+}

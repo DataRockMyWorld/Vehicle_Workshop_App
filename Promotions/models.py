@@ -1,5 +1,6 @@
 from decimal import Decimal
 
+from django.conf import settings
 from django.db import models
 
 
@@ -30,3 +31,51 @@ class Promotion(models.Model):
         if self.discount_amount is not None and self.discount_amount > 0:
             return min(self.discount_amount, subtotal)
         return Decimal("0")
+
+
+class SMSBlast(models.Model):
+    """Record of an SMS blast sent to customers (e.g. for a promotion)."""
+
+    AUDIENCE_ALL = "all"
+    AUDIENCE_OPT_IN = "opt_in"
+    AUDIENCE_SITE = "site"
+
+    AUDIENCE_CHOICES = [
+        (AUDIENCE_ALL, "All customers"),
+        (AUDIENCE_OPT_IN, "Opt-in only"),
+        (AUDIENCE_SITE, "Site-specific"),
+    ]
+
+    promotion = models.ForeignKey(
+        Promotion,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="sms_blasts",
+    )
+    message = models.TextField()
+    audience = models.CharField(max_length=20, choices=AUDIENCE_CHOICES, default=AUDIENCE_ALL)
+    site = models.ForeignKey(
+        "Site.Site",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="sms_blasts",
+        help_text="Required when audience=site.",
+    )
+    total_count = models.PositiveIntegerField(default=0, help_text="Customers matched by audience.")
+    sent_count = models.PositiveIntegerField(default=0, help_text="SMS successfully sent.")
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="sms_blasts",
+    )
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        promo = self.promotion.title if self.promotion else "Standalone"
+        return f"SMS Blast {self.id} - {promo} ({self.sent_count}/{self.total_count})"

@@ -4,11 +4,13 @@ import { serviceRequests, serviceCategories, customers, vehicles, sites } from '
 import { apiErrorMsg, toList } from '../api/client'
 import Loader from '../components/Loader'
 import { useAuth } from '../context/AuthContext'
+import { useUnsavedChanges } from '../hooks/useUnsavedChanges'
+import UnsavedChangesModal from '../components/UnsavedChangesModal'
 import './ServiceRequestCreatePage.css'
 
 export default function ServiceRequestCreatePage() {
   const navigate = useNavigate()
-  const { canWrite, siteId: userSiteId } = useAuth()
+  const { canWrite, canSeeAllSites, siteId: userSiteId } = useAuth()
   if (!canWrite) return <Navigate to="/service-requests" replace />
   const [customersList, setCustomersList] = useState([])
   const [vehiclesList, setVehiclesList] = useState([])
@@ -25,6 +27,8 @@ export default function ServiceRequestCreatePage() {
   const [serviceCategoryId, setServiceCategoryId] = useState('')
   const [serviceTypeId, setServiceTypeId] = useState('')
   const [description, setDescription] = useState('')
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const { showWarning, confirmNavigation, cancelNavigation } = useUnsavedChanges(hasUnsavedChanges)
 
   const STATUS_OPTIONS = [
     { value: 'Pending', label: 'Pending' },
@@ -69,10 +73,15 @@ export default function ServiceRequestCreatePage() {
     ? (serviceCategoriesList.find((c) => c.id === parseInt(serviceCategoryId, 10))?.service_types || [])
     : []
 
+  const effectiveSiteId = canSeeAllSites ? (siteId ? parseInt(siteId, 10) : null) : userSiteId
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!customerId || !vehicleId || !siteId || !status || !description.trim()) {
-      setError('Please fill in all required fields: customer, vehicle, site, status, and description.')
+    if (!customerId || !vehicleId || !status) {
+      setError('Please fill in all required fields: customer, vehicle, and status.')
+      return
+    }
+    if (!effectiveSiteId) {
+      setError(canSeeAllSites ? 'Please select a site.' : 'No site assigned. Contact your administrator.')
       return
     }
     setError(null)
@@ -80,13 +89,14 @@ export default function ServiceRequestCreatePage() {
     try {
       const payload: Record<string, unknown> = {
         customer: parseInt(customerId, 10),
-        site: parseInt(siteId, 10),
+        site: effectiveSiteId,
         status,
         service_type: serviceTypeId ? parseInt(serviceTypeId, 10) : null,
-        description: description.trim(),
+        description: description.trim() || '',
         vehicle: parseInt(vehicleId, 10),
       }
       const created = (await serviceRequests.create(payload)) as { id: number }
+      setHasUnsavedChanges(false)
       navigate(`/service-requests/${created.id}`)
     } catch (e) {
       setError(apiErrorMsg(e))
@@ -110,6 +120,11 @@ export default function ServiceRequestCreatePage() {
 
   return (
     <div className="sr-create">
+      <UnsavedChangesModal
+        isOpen={showWarning}
+        onConfirm={confirmNavigation}
+        onCancel={cancelNavigation}
+      />
       <div className="sr-create__header">
         <Link to="/service-requests" className="sr-create__back">← Back to service requests</Link>
         <h1 className="sr-create__title">New service request</h1>
@@ -122,7 +137,7 @@ export default function ServiceRequestCreatePage() {
         </div>
       )}
 
-      <form className="sr-create__form" onSubmit={handleSubmit}>
+      <form className="sr-create__form" onSubmit={handleSubmit} onChange={() => setHasUnsavedChanges(true)}>
         <div className="sr-create__main">
           <div className="sr-create__grid">
             <section className="sr-create__section">
@@ -173,13 +188,9 @@ export default function ServiceRequestCreatePage() {
           <section className="sr-create__section">
             <h3 className="sr-create__section-title">Location & status</h3>
             <div className="form-row">
-              <div className="form-group">
-                <label className="label">Site</label>
-                {userSiteId ? (
-                  <div className="form-readonly">
-                    {sitesList.find((s) => s.id === userSiteId)?.name ?? `Site #${userSiteId}`}
-                  </div>
-                ) : (
+              {canSeeAllSites && (
+                <div className="form-group">
+                  <label className="label">Site</label>
                   <select
                     id="site"
                     className="select"
@@ -192,8 +203,8 @@ export default function ServiceRequestCreatePage() {
                       <option key={s.id} value={s.id}>{s.name}</option>
                     ))}
                   </select>
-                )}
-              </div>
+                </div>
+              )}
               <div className="form-group">
                 <label className="label" htmlFor="status">Status</label>
                 <select
@@ -258,9 +269,8 @@ export default function ServiceRequestCreatePage() {
             className="input sr-create__textarea"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="Describe the service needed in detail…"
+            placeholder="Describe the service needed (optional)…"
             rows={4}
-            required
             />
           </section>
 

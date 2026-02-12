@@ -54,28 +54,3 @@ class DisplayNumberSequenceTests(TestCase):
         self.assertEqual(DisplayNumberSequence.objects.filter(prefix="T", year=year).count(), 1)
 
 
-class BackfillDisplayNumbersTests(TestCase):
-    """Optional: verify backfill logic assigns correct display_number format."""
-
-    def test_backfill_appointment_function_importable_and_runnable(self):
-        """Backfill migration forward function runs without error when no null rows exist."""
-        import importlib.util
-        from pathlib import Path
-
-        from django.db.migrations.loader import MigrationLoader
-
-        # Load backfill function from migration (module name starts with number)
-        migration_path = (
-            Path(__file__).resolve().parent.parent
-            / "Appointments"
-            / "migrations"
-            / "0003_backfill_appointment_display_numbers.py"
-        )
-        spec = importlib.util.spec_from_file_location("backfill_apt", migration_path)
-        mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(mod)
-
-        loader = MigrationLoader(None, ignore_no_migrations=True)
-        state = loader.project_state(("Appointments", "0003_backfill_appointment_display_numbers"))
-        # Run backfill with empty dataset (no-op but verifies no crash)
-        mod.backfill_apt_display_numbers(state.apps, schema_editor=None)

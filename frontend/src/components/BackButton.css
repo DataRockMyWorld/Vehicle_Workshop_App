@@ -1,0 +1,25 @@
+.back-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: transparent;
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 6px;
+  color: var(--text-muted, #6b7280);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-bottom: 1rem;
+}
+
+.back-button:hover {
+  background: var(--hover-bg, #f3f4f6);
+  color: var(--text, #1f2937);
+  border-color: var(--text-muted, #6b7280);
+}
+
+.back-button svg {
+  flex-shrink: 0;
+}

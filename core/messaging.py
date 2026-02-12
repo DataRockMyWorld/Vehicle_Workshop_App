@@ -41,6 +41,22 @@ def _format_to(to):
     return "+" + s
 
 
+def _is_valid_sms_number(formatted: str) -> bool:
+    """
+    Return False for placeholder/invalid numbers that Twilio will reject.
+    E.164 minimum: country code + subscriber number (e.g. +233501234567 = 12 chars).
+    """
+    if not formatted or formatted == "+???":
+        return False
+    digits = "".join(c for c in formatted if c.isdigit())
+    if len(digits) < 10:
+        return False
+    # Reject obvious placeholders: all zeros (e.g. walk-in customer 00000000)
+    if digits.strip("0") == "":
+        return False
+    return True
+
+
 def send_sms(to, body, context="sms"):
     """
     Send an SMS: log to console in dev, or send via Twilio when enabled.
@@ -50,6 +66,9 @@ def send_sms(to, body, context="sms"):
     - context: short label for logging (e.g. 'mechanic_assignment', 'invoice', 'job_complete')
     """
     to_display = _format_to(to)
+    if not _is_valid_sms_number(to_display):
+        logger.info("[SMS] context=%s to=%s skipped (invalid/placeholder number)", context, to_display)
+        return
     if _use_twilio():
         try:
             from twilio.rest import Client
@@ -61,8 +80,8 @@ def send_sms(to, body, context="sms"):
             )
             logger.info("[SMS] context=%s to=%s sent via Twilio", context, to_display)
         except Exception as e:
-            logger.exception("[SMS] context=%s to=%s Twilio send failed: %s", context, to_display, e)
-            raise
+            logger.warning("[SMS] context=%s to=%s Twilio send failed: %s", context, to_display, e)
+            # Do not re-raise: notification failures should not fail the parent task
     else:
         # Development: log to console so you can confirm the flow works
         sep = "\n"

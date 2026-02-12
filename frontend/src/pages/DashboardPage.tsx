@@ -455,10 +455,6 @@ export default function DashboardPage() {
             <span className="dashboard__action-icon">👤</span>
             <span className="dashboard__action-label">Customers</span>
           </Link>
-          <Link to="/appointments" className="dashboard__action-card card">
-            <span className="dashboard__action-icon">📅</span>
-            <span className="dashboard__action-label">Appointments</span>
-          </Link>
           <Link to="/inventory" className="dashboard__action-card card">
             <span className="dashboard__action-icon">📦</span>
             <span className="dashboard__action-label">Inventory</span>

@@ -18,3 +18,11 @@ media/
 frontend/node_modules
 frontend/dist
 frontend/playwright/.auth
+
+# Accidental pip installs in project root (use venv)
+et_xmlfile/
+openpyxl/
+*.dist-info/
+
+# Backups
+backup*.sql

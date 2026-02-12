@@ -1,28 +1,38 @@
 import { useState, useEffect } from 'react'
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useInactivityTimeout } from '../hooks/useInactivityTimeout'
+import Breadcrumbs from './Breadcrumbs'
+import InactivityWarningModal from './InactivityWarningModal'
 import './Layout.css'
 
-const nav = [
-  { to: '/', label: 'Dashboard', end: true },
+const NAV_ITEMS = [
+  { to: '/', label: 'Home', end: true },
+  { to: '/dashboard', label: 'Dashboard', end: true },
   { to: '/service-requests', label: 'Service requests', end: false },
   { to: '/parts-sale', label: 'Sales', end: false },
-  { to: '/appointments', label: 'Appointments', end: false },
   { to: '/customers', label: 'Customers', end: false },
   { to: '/vehicles', label: 'Vehicles', end: false },
   { to: '/mechanics', label: 'Mechanics', end: false },
-  { to: '/sites', label: 'Sites', end: false },
-  { to: '/products', label: 'Products', end: false },
+  { to: '/sites', label: 'Sites', end: false, requiresCanSeeAllSites: true },
+  { to: '/products', label: 'Products', end: false, requiresCanSeeAllSites: true },
+  { to: '/promotions', label: 'Promotions', end: false, requiresCanSeeAllSites: true },
   { to: '/inventory', label: 'Inventory', end: false },
   { to: '/invoices', label: 'Invoices', end: false },
   { to: '/reports/sales', label: 'Sales report', end: false },
   { to: '/audit', label: 'Audit trail', end: false },
 ]
 
-function NavLinks({ onNavigate }: { onNavigate?: () => void } = {}) {
+function NavLinks({
+  items,
+  onNavigate,
+}: {
+  items: Array<{ to: string; label: string; end: boolean }>
+  onNavigate?: () => void
+}) {
   return (
     <>
-      {nav.map(({ to, label, end }) => (
+      {items.map(({ to, label, end }) => (
         <NavLink
           key={to}
           to={to}
@@ -38,9 +48,14 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void } = {}) {
 }
 
 export default function Layout() {
-  const { user, logout } = useAuth()
+  const { user, logout, canSeeAllSites } = useAuth()
   const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
+  const { showWarning, countdown, extendSession } = useInactivityTimeout()
+
+  const navItems = NAV_ITEMS.filter(
+    (item) => !(item as { requiresCanSeeAllSites?: boolean }).requiresCanSeeAllSites || canSeeAllSites
+  ).map(({ to, label, end }) => ({ to, label, end }))
 
   const closeMenu = () => setMenuOpen(false)
 
@@ -59,13 +74,18 @@ export default function Layout() {
 
   return (
     <div className="layout">
+      <InactivityWarningModal
+        isOpen={showWarning}
+        countdown={countdown}
+        onExtend={extendSession}
+      />
       <aside className="layout__side layout__side--desktop">
         <div className="layout__brand">
           <img src="/logo.png" alt="" className="layout__logo" aria-hidden="true" />
           <span className="layout__name">Feeling Autopart</span>
         </div>
         <nav className="layout__nav" aria-label="Main">
-          <NavLinks />
+          <NavLinks items={navItems} />
         </nav>
         <div className="layout__side-foot">
           <span className="layout__user" title={user?.email}>{user?.email || 'User'}</span>
@@ -109,7 +129,7 @@ export default function Layout() {
           </button>
         </div>
         <nav className="layout__drawer-nav" aria-label="Main">
-          <NavLinks onNavigate={closeMenu} />
+          <NavLinks items={navItems} onNavigate={closeMenu} />
         </nav>
         <div className="layout__drawer-foot">
           <span className="layout__user" title={user?.email}>{user?.email || 'User'}</span>
@@ -137,6 +157,7 @@ export default function Layout() {
             <span />
           </button>
         </header>
+        <Breadcrumbs />
         <Outlet />
       </main>
     </div>

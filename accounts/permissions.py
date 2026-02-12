@@ -46,6 +46,19 @@ class IsSuperUserOrSiteScoped(permissions.BasePermission):
         return obj_site is not None and obj_site.id == site.id
 
 
+class IsCEOOrSuperuser(permissions.BasePermission):
+    """
+    Only CEO (can_see_all_sites) or superuser can access.
+    Used for promotions management and SMS blast.
+    """
+    message = "Only CEO/admin can access this."
+
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+        return request.user.is_superuser or getattr(request.user, "can_see_all_sites", False)
+
+
 class IsReadOnlyForHQ(permissions.BasePermission):
     """
     CEO/MD (can_see_all_sites) = read-only. Site supervisors (user.site set) = full access.

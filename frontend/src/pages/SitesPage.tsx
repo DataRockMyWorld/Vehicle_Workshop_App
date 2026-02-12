@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react'
+import { Navigate } from 'react-router-dom'
 import { sites } from '../api/services'
 import { useAuth } from '../context/AuthContext'
 import { apiErrorMsg, toList } from '../api/client'
@@ -9,7 +10,8 @@ import PageError from '../components/PageError'
 import './GenericListPage.css'
 
 export default function SitesPage() {
-  const { canWrite } = useAuth()
+  const { canWrite, canSeeAllSites } = useAuth()
+  if (!canSeeAllSites) return <Navigate to="/" replace />
   const { data: rawList, loading, error, refetch } = useAsyncData(() => sites.list(), [])
   const list = toList(rawList ?? null)
   const load = useCallback(() => refetch(), [refetch])

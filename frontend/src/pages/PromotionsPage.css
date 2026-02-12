@@ -1,0 +1,35 @@
+.promotions-page__desc {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+}
+
+.promotions-page__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.promotions-page__actions .btn--small {
+  font-size: 0.8rem;
+  padding: 0.35rem 0.6rem;
+}
+
+.promotions-page__actions .btn--danger {
+  background: var(--error-muted);
+  color: var(--error);
+  border: 1px solid var(--error);
+}
+
+.promotions-page__actions .btn--danger:hover:not(:disabled) {
+  background: var(--error);
+  color: white;
+}
+
+.promotions-page__history-title {
+  margin: 0 0 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+}

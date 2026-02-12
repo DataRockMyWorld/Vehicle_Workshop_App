@@ -310,3 +310,13 @@ textarea.input {
   }
 }
 
+/* NProgress loading bar */
+#nprogress .bar {
+  background: var(--accent, #ff6b35) !important;
+  height: 3px !important;
+}
+
+#nprogress .peg {
+  box-shadow: 0 0 10px var(--accent, #ff6b35), 0 0 5px var(--accent, #ff6b35) !important;
+}
+

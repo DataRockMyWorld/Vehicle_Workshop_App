@@ -1,5 +1,5 @@
-# syntax=docker/dockerfile:1
 # Vehicle Workshop App - production-ready multi-stage build
+# Note: syntax directive removed to avoid auth.docker.io fetch behind corporate proxy
 
 # ---- builder ----
 FROM python:3.11-slim as builder

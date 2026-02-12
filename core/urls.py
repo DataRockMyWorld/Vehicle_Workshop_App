@@ -34,7 +34,6 @@ from ServiceRequests.views import ServiceCategoriesView
 urlpatterns = [
     path("health/", views.health),
     path("admin/", admin.site.urls),
-    path("api/v1/appointments/", include("Appointments.urls")),
     path("api/v1/dashboard/", include("dashboard.urls")),
     path("api/v1/search/", SearchView.as_view(), name="search"),
     path("api/v1/audit/", include("audit.urls")),

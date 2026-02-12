@@ -25,12 +25,12 @@ test.describe('Login', () => {
     await expect(page.getByRole('alert')).toBeVisible({ timeout: 5000 })
   })
 
-  test('valid login redirects to dashboard', async ({ page }) => {
+  test('valid login redirects to home', async ({ page }) => {
     await page.goto('/login')
     await page.getByLabel(/email/i).fill(TEST_EMAIL)
     await page.getByLabel(/password/i).fill(TEST_PASSWORD)
     await page.getByRole('button', { name: /sign in/i }).click()
     await expect(page).toHaveURL('/', { timeout: 10000 })
-    await expect(page.getByRole('link', { name: /dashboard/i })).toBeVisible()
+    await expect(page.locator('.layout__nav').getByRole('link', { name: 'Dashboard' })).toBeVisible()
   })
 })

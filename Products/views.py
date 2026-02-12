@@ -210,9 +210,12 @@ class ProductSearchView(APIView):
             except (ValueError, TypeError):
                 pass
 
-        # Optional: filter by vehicle make/model (application contains it)
+        # Optional: filter by vehicle make/model (application contains it).
+        # Only apply when it yields results; otherwise show all site inventory (vehicle filter too strict).
         if vehicle:
-            qs = qs.filter(application__icontains=vehicle)
+            qs_vehicle = qs.filter(application__icontains=vehicle)
+            if qs_vehicle.exists():
+                qs = qs_vehicle
         if not q:
             # Return initial product list for browse/select (e.g. when adding to inventory).
             # With vehicle/site_id we could add availability; for now return catalog.

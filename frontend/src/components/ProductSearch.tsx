@@ -51,10 +51,16 @@ export default function ProductSearch({
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
+    const q = query.trim()
+    if (!q) {
+      setResults([])
+      setOpen(false)
+      return
+    }
     debounceRef.current = setTimeout(() => {
-      fetchResults(query)
+      fetchResults(q)
       setOpen(true)
-    }, query.trim() ? 220 : 0)
+    }, 220)
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current)
     }
@@ -131,10 +137,6 @@ export default function ProductSearch({
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => {
             if (results.length > 0) setOpen(true)
-            else if (!query.trim()) {
-              setOpen(true)
-              fetchResults('')
-            }
           }}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}

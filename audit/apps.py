@@ -14,10 +14,9 @@ class AuditConfig(AppConfig):
         from Customers.models import Customer
         from Vehicles.models import Vehicle
         from Invoices.models import Invoice
-        from Appointments.models import Appointment
         from Inventories.models import Inventory
 
-        for model in (ServiceRequest, Customer, Vehicle, Invoice, Appointment, Inventory):
+        for model in (ServiceRequest, Customer, Vehicle, Invoice, Inventory):
             pre_save.connect(_capture_pre_save, sender=model)
             post_save.connect(log_create, sender=model)
             post_save.connect(log_update, sender=model)

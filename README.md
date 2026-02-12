@@ -30,7 +30,7 @@ A Django-based management application for vehicle workshops. This app helps work
 ## Features
 
 - **Customer and Vehicle Management**: Manage customer details and their associated vehicles.
-- **Display Numbers**: Human-readable IDs (e.g. `INV-2025-00001`, `SR-2025-0042`, `APT-2025-0001`) for invoices, service requests, and appointments instead of raw database IDs.
+- **Display Numbers**: Human-readable IDs (e.g. `INV-2025-00001`, `SR-2025-0042`, `SALE-2025-0042`) for invoices, service requests, and sales instead of raw database IDs.
 - **Service Request Management**: Create, assign, and complete service requests.
 - **Mechanic Assignment and Notifications**: Notify mechanics of assigned tasks.
 - **Inventory Management**: Track product usage and automatically adjust inventory upon service completion.
