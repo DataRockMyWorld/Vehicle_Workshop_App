@@ -149,6 +149,13 @@ Override the web port with `WEB_PORT`, e.g. `WEB_PORT=9000 docker compose up -d`
 
 ---
 
+## Deployment
+
+- **Railway**: See [docs/RAILWAY_DEPLOYMENT.md](docs/RAILWAY_DEPLOYMENT.md) for a step-by-step deploy guide.
+- **API documentation**: Swagger UI at `/api/schema/docs/`, OpenAPI at `/api/schema/`. See [docs/API_REFERENCE.md](docs/API_REFERENCE.md).
+
+---
+
 ## Frontend
 
 A React + Vite app in the `frontend/` folder provides a login page and dashboard that use the JWT API.

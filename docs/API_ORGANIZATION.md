@@ -11,7 +11,6 @@ All REST endpoints live under `/api/v1/`. Auth endpoints are at `/auth/`.
 | Path Prefix | App | Endpoints |
 |-------------|-----|-----------|
 | `/api/v1/` | (core) | Aggregates all app URLs |
-| `/api/v1/appointments/` | Appointments | List, detail, availability |
 | `/api/v1/dashboard/` | Dashboard | Metrics, site, activities, reports, export |
 | `/api/v1/search/` | Dashboard | Global search |
 | `/api/v1/audit/` | Audit | Audit logs |
@@ -24,7 +23,7 @@ All REST endpoints live under `/api/v1/`. Auth endpoints are at `/auth/`.
 | `/api/v1/service_request/` | ServiceRequests | CRUD, complete, product-usage |
 | `/api/v1/invoices/` | Invoices | CRUD, PDF |
 | `/api/v1/products/` | Products | CRUD, search, import |
-| `/api/v1/promotions/active/` | Promotions | Active promotions list |
+| `/api/v1/promotions/` | Promotions | CRUD, active list, SMS blast, SMS history |
 | `/api/v1/sites/` | Site | CRUD |
 
 ### Inconsistencies (Current)
@@ -49,8 +48,9 @@ For **new** or **refactored** endpoints, prefer:
 
 - **OpenAPI Schema**: `GET /api/schema/` (JSON)
 - **Swagger UI**: `GET /api/schema/docs/` (interactive docs)
+- **Full reference**: See [API_REFERENCE.md](./API_REFERENCE.md)
 
-Use Swagger UI to explore endpoints, try requests, and inspect request/response schemas. JWT can be passed via the "Authorize" button (Bearer token).
+Use Swagger UI to explore endpoints, try requests, and inspect request/response schemas. JWT can be passed via the **Authorize** button (Bearer token).
 
 ## Display Numbers
 
@@ -67,7 +67,6 @@ List and detail views use `select_related()` and `prefetch_related()` to avoid N
 | Inventory | `select_related("product", "site")` |
 | Vehicle | `select_related("customer", "site")` |
 | Mechanic | `select_related("site")` |
-| Appointment | `select_related("customer", "vehicle", "site", "mechanic")` |
 | ProductUsage | `select_related("service_request", "product")` |
 | ServiceCategory | `prefetch_related("service_types")` |
 

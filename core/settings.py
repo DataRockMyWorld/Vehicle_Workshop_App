@@ -166,15 +166,20 @@ MEDIA_ROOT = BASE_DIR / "media"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = "accounts.CustomUser"
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://localhost:5173",
-    "http://localhost:5174",
-    "http://127.0.0.1:3000",
-    "http://127.0.0.1:8000",
-    "http://127.0.0.1:5173",
-    "http://127.0.0.1:5174",
-]
+_cors_origins = env("CORS_ALLOWED_ORIGINS", default="")
+CORS_ALLOWED_ORIGINS = (
+    [x.strip() for x in _cors_origins.split(",") if x.strip()]
+    if _cors_origins
+    else [
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:8000",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:5174",
+    ]
+)
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
@@ -185,9 +190,15 @@ SIMPLE_JWT = {
 
 SPECTACULAR_SETTINGS = {
     "TITLE": "Vehicle Workshop Management API",
-    "DESCRIPTION": "REST API for vehicle workshop operations: customers, vehicles, service requests, inventory, invoicing, and reporting. Authenticate via JWT (login/refresh) before calling protected endpoints.",
+    "DESCRIPTION": (
+        "REST API for vehicle workshop operations: customers, vehicles, service requests, "
+        "inventory, invoicing, promotions (including SMS blast), and reporting.\n\n"
+        "**Authentication**: POST to `/auth/login/` with `email` and `password` to get JWT. "
+        "Use the `access` token as Bearer in the Authorization header. Click **Authorize** in Swagger UI."
+    ),
     "VERSION": "1.0.0",
     "SCHEMA_PATH_PREFIX": r"/api/v[0-9]+/",
+    "COMPONENT_SPLIT_REQUEST": True,
     "TAGS": [
         {"name": "auth", "description": "Authentication (JWT login, refresh, logout)"},
         {"name": "customers", "description": "Customer records and walk-in sales"},
@@ -198,10 +209,9 @@ SPECTACULAR_SETTINGS = {
         {"name": "inventory", "description": "Stock and low-stock alerts"},
         {"name": "products", "description": "Product catalog and search"},
         {"name": "sites", "description": "Workshop sites/locations"},
-        {"name": "appointments", "description": "Service appointment scheduling"},
         {"name": "dashboard", "description": "CEO/site dashboards and reports"},
         {"name": "audit", "description": "Audit trail of changes"},
-        {"name": "promotions", "description": "Active promotions"},
+        {"name": "promotions", "description": "Promotions CRUD and SMS blast to customers"},
     ],
     "SWAGGER_UI_SETTINGS": {
         "deepLinking": True,

@@ -105,6 +105,6 @@
 }
 
 .inventory-page__sku-cell {
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
   font-size: 0.9em;
 }
