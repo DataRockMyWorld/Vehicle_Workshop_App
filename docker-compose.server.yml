@@ -1,0 +1,96 @@
+# Use this on the server when you build the image elsewhere and pull it.
+# Set APP_IMAGE (e.g. docker.io/youruser/vehicle-workshop-app:latest) in .env.
+# Run: docker compose -f docker-compose.server.yml pull && docker compose -f docker-compose.server.yml up -d
+
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-workshop}
+      POSTGRES_USER: ${POSTGRES_USER:-workshop}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-workshop}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-workshop} -d ${POSTGRES_DB:-workshop}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  web:
+    image: ${APP_IMAGE}
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-workshop}:${POSTGRES_PASSWORD:-workshop}@db:5432/${POSTGRES_DB:-workshop}
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      ALLOWED_HOSTS: localhost,127.0.0.1,web,0.0.0.0
+    ports:
+      - "${WEB_PORT:-8000}:8000"
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
+
+  celery:
+    image: ${APP_IMAGE}
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-workshop}:${POSTGRES_PASSWORD:-workshop}@db:5432/${POSTGRES_DB:-workshop}
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+    command: celery -A core worker -l info
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      web: { condition: service_started }
+    restart: unless-stopped
+
+  celery-beat:
+    image: ${APP_IMAGE}
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-workshop}:${POSTGRES_PASSWORD:-workshop}@db:5432/${POSTGRES_DB:-workshop}
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+    command: celery -A core beat -l info
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      web: { condition: service_started }
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:

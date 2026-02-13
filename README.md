@@ -158,6 +158,27 @@ Override the web port with `WEB_PORT`, e.g. `WEB_PORT=9000 docker compose up -d`
 
 **Note:** Create `.env` from `.env.example` before running `docker compose`; the Compose file references `env_file: .env`.
 
+### Deploy on server without building (recommended if server build times out)
+
+If `docker compose build` on the server is slow or gets killed (e.g. SSH disconnect), build the image on your machine and run the server using that image:
+
+1. **On your machine** (where the build can complete):
+   ```bash
+   docker compose build
+   docker compose images   # note the image name for 'web', e.g. vehicle_workshop_app-web
+   docker tag vehicle_workshop_app-web:latest YOUR_REGISTRY/vehicle-workshop-app:latest
+   docker push YOUR_REGISTRY/vehicle-workshop-app:latest
+   ```
+   Replace `YOUR_REGISTRY` with e.g. `docker.io/yourusername` (Docker Hub) or `ghcr.io/yourusername` (GitHub Container Registry).
+
+2. **On the server**: ensure `.env` exists and set the image name, then pull and start (no build):
+   ```bash
+   echo "APP_IMAGE=YOUR_REGISTRY/vehicle-workshop-app:latest" >> .env
+   docker compose -f docker-compose.server.yml pull
+   docker compose -f docker-compose.server.yml up -d
+   ```
+   See `docker-compose.server.yml`; it uses `APP_IMAGE` and does not run any build on the server.
+
 ---
 
 ## Deployment
@@ -183,7 +204,7 @@ A React + Vite app in the `frontend/` folder provides a login page and dashboard
 
 ## Docker & robustness improvements
 
-- **Multi-stage Dockerfile**: Builder and runtime stages for smaller images; non-root user.
+- **Multi-stage Dockerfile**: Builder stage for compiling deps; runtime stage has only libpq5/curl (no build tools) and runs as non-root `appuser`.
 - **PostgreSQL + Redis**: DB and broker in containers with healthchecks; migration and static collection in entrypoint.
 - **Env-driven config**: `DATABASE_URL`, `CELERY_*`, `ALLOWED_HOSTS`, optional Twilio; SQLite fallback when `DATABASE_URL` is unset.
 - **Health endpoint**: `GET /health/` for load balancers and container healthchecks.
