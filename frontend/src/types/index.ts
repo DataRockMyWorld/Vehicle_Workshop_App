@@ -130,6 +130,7 @@ export interface ProductSearchResult {
   position?: string
   application?: string
   unit_price?: number
+  image_url?: string | null
   [key: string]: unknown
 }
 

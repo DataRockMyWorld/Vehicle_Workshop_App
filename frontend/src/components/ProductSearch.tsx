@@ -180,8 +180,17 @@ export default function ProductSearch({
                   if (!itemDisabled) handleSelect(p)
                 }}
               >
-                <span className="product-search__item-name">{p.name}</span>
-                <span className="product-search__item-meta">
+                <div className="product-search__item-content">
+                  {p.image_url && (
+                    <img
+                      src={p.image_url}
+                      alt=""
+                      className="product-search__item-image"
+                    />
+                  )}
+                  <div className="product-search__item-body">
+                    <span className="product-search__item-name">{p.name}</span>
+                    <span className="product-search__item-meta">
                   {p.fmsi_number && <span>FMSI: {p.fmsi_number}</span>}
                   {p.product_type && <span>{p.product_type}</span>}
                   {p.position && <span>{p.position}</span>}
@@ -193,6 +202,8 @@ export default function ProductSearch({
                     </span>
                   )}
                 </span>
+                  </div>
+                </div>
               </li>
             )
           })}

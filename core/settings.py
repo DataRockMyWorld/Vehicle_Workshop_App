@@ -10,7 +10,15 @@ env_path = BASE_DIR / ".env"
 if env_path.exists():
     environ.Env.read_env(str(env_path))
 
-SECRET_KEY = env("SECRET_KEY")
+SECRET_KEY = env("SECRET_KEY", default=None)
+if not SECRET_KEY:
+    import secrets
+    SECRET_KEY = secrets.token_hex(32)
+    import warnings
+    warnings.warn(
+        "SECRET_KEY not set. Using ephemeral value. Set SECRET_KEY in Railway Variables for stable sessions.",
+        RuntimeWarning,
+    )
 DEBUG = env("DEBUG")
 _allowed = env("ALLOWED_HOSTS", default="localhost,127.0.0.1")
 ALLOWED_HOSTS = [x.strip() for x in _allowed.split(",") if x.strip()]

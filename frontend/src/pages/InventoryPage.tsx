@@ -540,6 +540,9 @@ export default function InventoryPage() {
                       const available = Math.max(0, onHand - reserved)
                       const reorder = r.reorder_level ?? 0
                       const low = reorder > 0 && onHand <= reorder
+                      const outOfStock = onHand === 0
+                      const inStock = onHand > 0 && (reorder === 0 || onHand > reorder)
+                      const qtyStatus = outOfStock ? 'out-of-stock' : low ? 'low' : inStock ? 'in-stock' : ''
                       const name = r.product_name ?? `#${r.product}`
                       const sku = r.product_sku
                       const fmsi = r.product_fmsi
@@ -548,7 +551,7 @@ export default function InventoryPage() {
                       const unit = r.product_unit ?? 'each'
                       const siteNameVal = r.site_name ?? `#${r.site}`
                       return (
-                        <tr key={r.id} className={low ? 'inventory-row--low' : ''}>
+                        <tr key={r.id}>
                           <td>
                             <span className="inventory-product-name">{name}</span>
                             {r.product_brand && (
@@ -559,7 +562,9 @@ export default function InventoryPage() {
                           <td className="inventory-page__sku-cell">{skuFmsi}</td>
                           <td>{unit}</td>
                           {canSeeAllSites && <td>{siteNameVal}</td>}
-                          <td>{onHand}</td>
+                          <td className={qtyStatus ? `inventory-qty inventory-qty--${qtyStatus}` : ''}>
+                            {onHand}
+                          </td>
                           <td>{reserved}</td>
                           <td>{available}</td>
                           <td>
