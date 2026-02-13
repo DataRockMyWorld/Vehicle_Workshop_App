@@ -163,6 +163,7 @@ Override the web port with `WEB_PORT`, e.g. `WEB_PORT=9000 docker compose up -d`
 ## Deployment
 
 - **Railway**: See [docs/RAILWAY_DEPLOYMENT.md](docs/RAILWAY_DEPLOYMENT.md) for a step-by-step deploy guide.
+- **DigitalOcean + Vercel**: See [docs/DIGITALOCEAN_DEPLOYMENT.md](docs/DIGITALOCEAN_DEPLOYMENT.md) for backend on App Platform and frontend on Vercel.
 - **API documentation**: Swagger UI at `/api/schema/docs/`, OpenAPI at `/api/schema/`. See [docs/API_REFERENCE.md](docs/API_REFERENCE.md).
 
 ---

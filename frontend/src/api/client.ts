@@ -1,4 +1,4 @@
-const BASE = ''
+const BASE = import.meta.env.VITE_API_BASE ?? ''
 const API = '/api/v1'
 
 function getAuthHeaders(): Record<string, string> {
@@ -36,7 +36,8 @@ export async function api(path: string, options: ApiOptions = {}): Promise<unkno
     ...getAuthHeaders(),
     ...(options.headers as Record<string, string>),
   }
-  const res = await fetch(url, { ...options, headers })
+  const fullUrl = BASE ? `${BASE.replace(/\/$/, '')}${url}` : url
+  const res = await fetch(fullUrl, { ...options, headers })
   const data = res.status === 204 ? {} : await res.json().catch(() => ({}))
   if (!res.ok) {
     const isAuth = path.startsWith('/auth')
@@ -62,8 +63,9 @@ export async function api(path: string, options: ApiOptions = {}): Promise<unkno
 /** Fetch a binary response (PDF, CSV) with auth and trigger download. */
 export async function apiDownload(path: string, filename?: string): Promise<void> {
   const url = buildUrl(path)
+  const fullUrl = BASE ? `${BASE.replace(/\/$/, '')}${url}` : url
   const headers = { ...getAuthHeaders() }
-  const res = await fetch(url, { headers })
+  const res = await fetch(fullUrl, { headers })
   if (!res.ok) throw { status: res.status, detail: res.statusText }
   const blob = await res.blob()
   const a = document.createElement('a')
@@ -134,7 +136,8 @@ export function apiErrorMsg(err: unknown): string {
 }
 
 export async function login(email: string, password: string): Promise<{ access: string; refresh: string }> {
-  const res = await fetch(`${BASE}/auth/login/`, {
+  const loginUrl = BASE ? `${BASE.replace(/\/$/, '')}/auth/login/` : '/auth/login/'
+  const res = await fetch(loginUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
@@ -145,7 +148,8 @@ export async function login(email: string, password: string): Promise<{ access: 
 }
 
 export async function refreshToken(refresh: string): Promise<{ access: string; refresh?: string }> {
-  const res = await fetch(`${BASE}/auth/refresh/`, {
+  const refreshUrl = BASE ? `${BASE.replace(/\/$/, '')}/auth/refresh/` : '/auth/refresh/'
+  const res = await fetch(refreshUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ refresh }),
@@ -159,7 +163,8 @@ export async function refreshToken(refresh: string): Promise<{ access: string; r
 export async function logout(refresh: string | null): Promise<void> {
   if (!refresh) return
   try {
-    await fetch(`${BASE}/auth/logout/`, {
+    const logoutUrl = BASE ? `${BASE.replace(/\/$/, '')}/auth/logout/` : '/auth/logout/'
+    await fetch(logoutUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refresh }),
