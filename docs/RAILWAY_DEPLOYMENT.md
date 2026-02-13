@@ -60,7 +60,7 @@ Deploy the Vehicle Workshop app to Railway for testing outside your local enviro
 
 ## Step 4: Root Directory (Monorepo)
 
-If your repo root has both `frontend/` and backend files:
+The repo has `backend/` (Django) and `frontend/` (React). The `Dockerfile` at repo root copies `backend/` into the container.
 
 1. Service **Settings** → **Root Directory**: leave empty (or `/` for repo root)
 2. Railway uses the `Dockerfile` at the repo root

@@ -32,7 +32,7 @@ services:
   web:
     build: .
     volumes:
-      - .:/app
+      - ./backend:/app
     env_file: .env
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-workshop}:${POSTGRES_PASSWORD:-workshop}@db:5432/${POSTGRES_DB:-workshop}
@@ -59,7 +59,7 @@ services:
   celery:
     build: .
     volumes:
-      - .:/app
+      - ./backend:/app
     env_file: .env
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-workshop}:${POSTGRES_PASSWORD:-workshop}@db:5432/${POSTGRES_DB:-workshop}
@@ -79,7 +79,7 @@ services:
   celery-beat:
     build: .
     volumes:
-      - .:/app
+      - ./backend:/app
     env_file: .env
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-workshop}:${POSTGRES_PASSWORD:-workshop}@db:5432/${POSTGRES_DB:-workshop}

@@ -16,7 +16,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
+COPY backend/requirements.txt .
 RUN pip wheel --no-deps -w /wheels -r requirements.txt
 
 # ---- runtime ----
@@ -37,7 +37,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=builder /wheels /wheels
 RUN pip install --no-cache /wheels/* && rm -rf /wheels
 
-COPY --chown=appuser:appuser . .
+COPY --chown=appuser:appuser backend/ .
 RUN chmod +x scripts/entrypoint.sh
 
 USER appuser

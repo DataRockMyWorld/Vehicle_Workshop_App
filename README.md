@@ -40,6 +40,17 @@ A Django-based management application for vehicle workshops. This app helps work
   - **Promotional Notifications**: Notify customers about active promotions.
 - **Multi-Site Management**: Supports multiple workshop locations with superuser-level access to all sites.
 
+## Project Structure
+
+```
+Vehicle_Workshop_App/
+├── backend/          # Django API (manage.py, core/, apps...)
+├── frontend/         # React + Vite app
+├── docs/             # Documentation
+├── docker-compose.yml
+└── Dockerfile        # Builds from backend/
+```
+
 ## Tech Stack
 
 - **Backend**: Django, Django REST Framework (DRF)
@@ -73,7 +84,7 @@ A Django-based management application for vehicle workshops. This app helps work
 
 3. **Install Dependencies**:
    ```bash
-   pip install -r requirements.txt
+   pip install -r backend/requirements.txt
    ```
 
 ### Environment Variables
@@ -90,17 +101,17 @@ See `.env.example` for all supported variables. Required: `SECRET_KEY`, `DEBUG`,
 
 1. **Apply Migrations**:
    ```bash
-   python manage.py migrate
+   cd backend && python manage.py migrate
    ```
 
 2. **Create a Superuser**:
    ```bash
-   python manage.py createsuperuser
+   cd backend && python manage.py createsuperuser
    ```
 
 3. **Start the Django Server**:
    ```bash
-   python manage.py runserver
+   cd backend && python manage.py runserver
    ```
 
 4. **Start Redis Server**:
@@ -112,8 +123,8 @@ See `.env.example` for all supported variables. Required: `SECRET_KEY`, `DEBUG`,
    - In separate terminals, run the following:
 
    ```bash
-   celery -A core worker -l info
-   celery -A core beat -l info
+   cd backend && celery -A core worker -l info
+   cd backend && celery -A core beat -l info
    ```
 
 ---
@@ -235,7 +246,7 @@ This app uses Celery for handling background tasks like sending notifications an
 
 On push/PR to `master` or `main`, the CI workflow runs:
 
-- **Backend**: Django unit tests (`python manage.py test`)
+- **Backend**: Django unit tests (`cd backend && python manage.py test`)
 - **Frontend**: Vitest unit tests (`npm run test:run`) and build
 - **E2E**: Playwright tests (login, dashboard, service requests)
 
@@ -243,7 +254,8 @@ See `.github/workflows/ci.yml` for the full pipeline. Uses SQLite for tests (no 
 
 ### Local testing
 
-**Backend (Docker):** `docker compose exec web python manage.py test`
+**Backend (Docker):** `docker compose exec web python manage.py test`  
+**Backend (local):** `cd backend && python manage.py test`
 
 **Frontend:** `cd frontend && npm run test:run`
 

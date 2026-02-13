@@ -17,7 +17,7 @@ The **Vehicle Workshop App** is a management system for workshops that service v
 
 The system supports **multi-site** workshops, **JWT**-authenticated access, and optional **SMS** (Twilio). In development, notifications are logged to the console instead of sending real SMS.
 
-**Permissions:** Superusers (or users with `site=null`) see all sites and data. Site-scoped users (`site` set) see only their site's vehicles, mechanics, service requests, inventory, and invoices. Completed service requests are locked from edits and deletes. See `PERMISSIONS_DESIGN.md` for full details.
+**Permissions:** Superusers (or users with `site=null`) see all sites and data. Site-scoped users (`site` set) see only their site's vehicles, mechanics, service requests, inventory, and invoices. Completed service requests are locked from edits and deletes.
 
 ---
 

@@ -59,8 +59,8 @@ Runs at [http://localhost:5173](http://localhost:5173). `/auth` and `/api` are p
 
 **Without Docker (local backend)**
 
-1. From project root: activate venv, then `python manage.py migrate` and `python manage.py runserver` (port 8000)
-2. Create E2E test user: `python manage.py create_e2e_user`
+1. From project root: activate venv, then `cd backend && python manage.py migrate` and `cd backend && python manage.py runserver` (port 8000)
+2. Create E2E test user: `cd backend && python manage.py create_e2e_user`
 3. Redis: start `redis-server` if Celery is required; for basic E2E (login, list pages), the API runs without Celery
 
 **Run tests**
