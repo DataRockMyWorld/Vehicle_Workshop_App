@@ -38,6 +38,10 @@ RUN apt-get update \
 COPY --from=builder /wheels /wheels
 RUN pip install --no-cache /wheels/* && rm -rf /wheels
 
+# Create non-root user for running the app
+RUN groupadd --gid 1000 appuser \
+    && useradd --uid 1000 --gid appuser --shell /bin/bash --create-home appuser
+
 COPY --chown=appuser:appuser backend/ .
 RUN chmod +x scripts/entrypoint.sh
 
