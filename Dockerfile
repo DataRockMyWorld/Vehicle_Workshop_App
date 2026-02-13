@@ -11,10 +11,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    libpq-dev \
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+       build-essential libpq-dev \
     && rm -rf /var/lib/apt/lists/*
+
 
 COPY backend/requirements.txt .
 RUN pip wheel --no-deps -w /wheels -r requirements.txt
@@ -28,11 +29,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpq5 \
-    curl \
-    && rm -rf /var/lib/apt/lists/* \
-    && useradd -m -u 1000 -s /bin/bash appuser
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+       libpq5 curl \
+    && rm -rf /var/lib/apt/lists/*
+   
 
 COPY --from=builder /wheels /wheels
 RUN pip install --no-cache /wheels/* && rm -rf /wheels
