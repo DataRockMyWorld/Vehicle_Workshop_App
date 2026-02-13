@@ -1,5 +1,4 @@
 # Vehicle Workshop App - production multi-stage build
-# Build elsewhere (CI or local) and use docker-compose.server.yml on the server to avoid long builds.
 # Note: syntax directive removed to avoid auth.docker.io fetch behind corporate proxy
 
 # ---- builder ----
