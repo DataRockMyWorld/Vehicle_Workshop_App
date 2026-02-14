@@ -42,7 +42,7 @@ services:
       POSTGRES_PORT: "5432"
       REDIS_HOST: redis
       REDIS_PORT: "6379"
-      ALLOWED_HOSTS: localhost,127.0.0.1,web,0.0.0.0
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1,web,0.0.0.0}
     ports:
       - "${WEB_PORT:-8000}:8000"
     depends_on:
