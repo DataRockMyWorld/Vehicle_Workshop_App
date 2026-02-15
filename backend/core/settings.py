@@ -24,6 +24,10 @@ if not SECRET_KEY:
 DEBUG = env("DEBUG")
 _allowed = env("ALLOWED_HOSTS", default="localhost,127.0.0.1")
 ALLOWED_HOSTS = [x.strip() for x in _allowed.split(",") if x.strip()]
+# Always allow localhost/127.0.0.1 so Docker healthcheck (curl from inside container) gets 200
+for h in ("localhost", "127.0.0.1"):
+    if h not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(h)
 
 # Database
 if env("DATABASE_URL", default=""):
