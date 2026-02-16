@@ -82,7 +82,7 @@ In GitHub: **Settings** → **Branches** → **Branch protection rules** → add
 
 ---
 
-## 3. What runs when
+## 3. What runs
 
 - **Push or PR to `main`/`master`**  
   - **CI** workflow runs (backend + frontend + E2E tests).
