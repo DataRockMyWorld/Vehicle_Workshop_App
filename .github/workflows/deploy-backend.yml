@@ -1,0 +1,30 @@
+# Deploy backend to droplet on push to main/master.
+# Requires GitHub secrets: DEPLOY_SSH_KEY, DEPLOY_HOST, DEPLOY_USER (see docs/CICD_SETUP.md).
+# Tip: In GitHub branch protection, require CI to pass before merging so only green builds deploy.
+
+name: Deploy Backend
+
+on:
+  push:
+    branches: [master, main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to droplet
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            set -e
+            cd ${{ secrets.DEPLOY_PATH || '~/Vehicle_Workshop_App' }}
+            git fetch origin
+            git reset --hard origin/${{ github.ref_name }}
+            docker compose build --no-cache web celery celery-beat
+            docker compose up -d
+            docker compose exec -T web python manage.py migrate --noinput || true
