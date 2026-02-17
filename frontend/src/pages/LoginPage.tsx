@@ -38,75 +38,87 @@ export default function LoginPage() {
   return (
     <div className="login">
       <div className="login__container">
-      <div className="login__brand">
-        <div className="login__brand-inner">
-          <div className="login__logo-wrap">
-            <img
-              src="/logo.png"
-              alt="Feeling Autopart"
-              className="login__logo"
-            />
+        <div className="login__brand">
+          <div className="login__brand-inner">
+            <div className="login__logo-wrap">
+              <img
+                src="/logo.png"
+                alt="Feeling Autopart"
+                className="login__logo"
+              />
+            </div>
+            <h1 className="login__brand-title">Feeling Autopart</h1>
+            <p className="login__brand-tagline">Workshop Management System</p>
+            <div className="login__brand-accent" aria-hidden="true" />
           </div>
-          <h1 className="login__brand-title">Feeling Autopart</h1>
-          <p className="login__brand-tagline">Workshop Management System</p>
-          <div className="login__brand-accent" aria-hidden="true" />
         </div>
-      </div>
 
-      <div className="login__form-section">
-        <div className="login__card">
-          <h2 className="login__form-title">Welcome back</h2>
-          <p className="login__form-subtitle">Sign in to your account</p>
-
-          <form className="login__form" onSubmit={handleSubmit}>
-            {error && (
-              <div className="login__error" role="alert">
-                {error}
+        <div className="login__form-section">
+          <div className="login__card">
+            <div className="login__card-brand">
+              <img
+                src="/logo.png"
+                alt="Feeling Autopart"
+                className="login__card-logo"
+              />
+              <div className="login__card-brand-text">
+                <div className="login__card-brand-name">Feeling Autopart</div>
+                <div className="login__card-brand-tagline">Workshop Management</div>
               </div>
-            )}
+            </div>
 
-            <label className="login__label">
-              <span className="login__label-text">Email</span>
-              <input
-                type="email"
-                name="email"
-                autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                className="login__input"
-                required
-              />
-            </label>
+            <h2 className="login__form-title">Welcome back</h2>
+            <p className="login__form-subtitle">Sign in to your account</p>
 
-            <label className="login__label">
-              <span className="login__label-text">Password</span>
-              <input
-                type="password"
-                name="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="login__input"
-                required
-              />
-            </label>
+            <form className="login__form" onSubmit={handleSubmit}>
+              {error && (
+                <div className="login__error" role="alert">
+                  {error}
+                </div>
+              )}
 
-            <button
-              type="submit"
-              className="login__submit"
-              disabled={submitting}
-            >
-              {submitting ? 'Signing in…' : 'Sign in'}
-            </button>
-          </form>
+              <label className="login__label">
+                <span className="login__label-text">Email</span>
+                <input
+                  type="email"
+                  name="email"
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  className="login__input"
+                  required
+                />
+              </label>
 
-          <p className="login__footer">
-            Use your workshop account credentials.
-          </p>
+              <label className="login__label">
+                <span className="login__label-text">Password</span>
+                <input
+                  type="password"
+                  name="password"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="login__input"
+                  required
+                />
+              </label>
+
+              <button
+                type="submit"
+                className="login__submit"
+                disabled={submitting}
+              >
+                {submitting ? 'Signing in…' : 'Sign in'}
+              </button>
+            </form>
+
+            <p className="login__footer">
+              Use your workshop account credentials.
+            </p>
+          </div>
         </div>
-      </div>
       </div>
     </div>
   )

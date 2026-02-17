@@ -23,7 +23,6 @@
 @media (max-width: 900px) {
   .login__container {
     grid-template-columns: 1fr;
-    grid-template-rows: auto 1fr;
     max-width: 420px;
   }
 }
@@ -136,6 +135,60 @@
   padding: 2.5rem;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
   border: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+/* Compact brand header shown on mobile (instead of the big left panel) */
+.login__card-brand {
+  display: none;
+  align-items: center;
+  gap: 0.85rem;
+  margin-bottom: 1.5rem;
+}
+
+.login__card-logo {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  flex: 0 0 auto;
+}
+
+.login__card-brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+
+.login__card-brand-name {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.login__card-brand-tagline {
+  margin-top: 0.2rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+@media (max-width: 900px) {
+  /* Hide the big brand panel so the logo isn't stacked above the card */
+  .login__brand {
+    display: none;
+  }
+
+  .login__form-section {
+    padding-top: 2rem;
+  }
+
+  .login__card {
+    padding: 2rem 1.5rem;
+  }
+
+  .login__card-brand {
+    display: flex;
+  }
 }
 
 .login__form-title {

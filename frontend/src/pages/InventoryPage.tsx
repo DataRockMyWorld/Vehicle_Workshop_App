@@ -230,7 +230,6 @@ export default function InventoryPage() {
                 placeholder="Search by FMSI, position, brand, application…"
                 onSelect={(p) => setProductId(p ? String(p.id) : '')}
                 onChange={(id) => setProductId(id || '')}
-                siteId={canSeeAllSites ? (siteId ? parseInt(siteId, 10) : null) : userSiteId ?? null}
               />
             </div>
             {canSeeAllSites && (
