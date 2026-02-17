@@ -20,6 +20,7 @@ jobs:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
+          command_timeout: 40m
           script: |
             set -e
             cd ${{ secrets.DEPLOY_PATH || '~/Vehicle_Workshop_App' }}
