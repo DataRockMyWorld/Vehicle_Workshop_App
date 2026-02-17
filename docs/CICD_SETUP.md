@@ -88,7 +88,7 @@ In GitHub: **Settings** → **Branches** → **Branch protection rules** → add
   - **CI** workflow runs (backend + frontend + E2E tests).
 
 - **Push to `main`/`master`** (after you added secrets):  
-  - **Deploy Backend** workflow runs: SSH → `git fetch` / `git reset` → `docker compose build` → `docker compose up -d` → `migrate`.  
+  - **Deploy Backend** workflow runs: SSH → `git fetch` / `git reset` to the **branch that triggered the run** → `docker compose build web` (single image reused for web, celery, celery-beat) → `docker compose up -d` → `migrate`. If migrations fail, the deploy fails (no silent ignore).  
   - **Vercel** builds and deploys the frontend.
 
 - **Manual deploy**  
@@ -112,3 +112,13 @@ ssh -i /path/to/github_deploy codebond@165.232.32.207 "cd ~/Vehicle_Workshop_App
 ```
 
 If that works, the same key and user will work from GitHub Actions once the secrets are set.
+
+---
+
+## 5. Later: build in GitHub, pull on droplet (Fix 4)
+
+When you’re ready to speed up deploys further, you can move to **build in GitHub → push to registry → droplet only pulls**. The server then never compiles anything. Deferred until the current flow (single image, migrations, branch) is stable. When you come back to it, the steps are:
+
+- A workflow job that builds the image, tags it (e.g. `ghcr.io/OWNER/repo:latest`), and pushes using `GITHUB_TOKEN` or a PAT.
+- On the droplet: `docker compose pull` (and logging in to GHCR if the image is private).
+- `docker-compose.yml` (or an override) using the registry image for `web`/`celery`/`celery-beat` instead of `build: .` when deploying from the registry.
