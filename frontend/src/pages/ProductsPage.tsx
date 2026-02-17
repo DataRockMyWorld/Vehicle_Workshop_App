@@ -1,11 +1,10 @@
-import { useCallback, useEffect, useState, useMemo } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { products, inventory, sites } from '../api/services'
 import { useAuth } from '../context/AuthContext'
 import { apiErrorMsg, toList } from '../api/client'
 import { formatCurrency } from '../utils/currency'
-import { usePagination } from '../hooks/usePagination'
-import { useAsyncData } from '../hooks/useAsyncData'
+import { usePaginatedList } from '../hooks/usePaginatedList'
 import Pagination from '../components/Pagination'
 import PageError from '../components/PageError'
 import './GenericListPage.css'
@@ -32,11 +31,28 @@ const UNITS = [
 const CATEGORY_LABELS = Object.fromEntries(CATEGORIES.map((c) => [c.value, c.label]))
 const UNIT_LABELS = Object.fromEntries(UNITS.map((u) => [u.value, u.label]))
 
+const PRODUCT_PAGE_SIZE_OPTIONS = [10, 20, 50]
+
 export default function ProductsPage() {
   const { isSuperuser, canSeeAllSites } = useAuth()
   if (!canSeeAllSites) return <Navigate to="/" replace />
-  const { data: rawList, loading, error, refetch } = useAsyncData(() => products.list(), [])
-  const list = rawList ? toList(rawList) : []
+  const [searchFilter, setSearchFilter] = useState('')
+  const [pageSize, setPageSize] = useState(10)
+  const {
+    items: list,
+    count,
+    loading,
+    error,
+    page,
+    setPage,
+    totalPages,
+    pageSize: effectivePageSize,
+    refetch,
+  } = usePaginatedList(
+    (p) => products.list(p, { page_size: pageSize, q: searchFilter.trim() || undefined }),
+    [searchFilter, pageSize],
+    { pageSize }
+  )
   const load = useCallback(() => refetch(), [refetch])
   const [formError, setFormError] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -53,7 +69,6 @@ export default function ProductsPage() {
   const [is_active, setIs_active] = useState(true)
   const [importing, setImporting] = useState(false)
   const [importResult, setImportResult] = useState(null)
-  const [searchFilter, setSearchFilter] = useState('')
   const [stockModalProduct, setStockModalProduct] = useState(null)
   const [sitesList, setSitesList] = useState([])
   const [stockSiteId, setStockSiteId] = useState('')
@@ -110,30 +125,6 @@ export default function ProductsPage() {
       setStockSubmitting(false)
     }
   }
-
-  const filteredList = useMemo(() => {
-    if (!searchFilter.trim()) return list
-    const q = searchFilter.trim().toLowerCase()
-    return list.filter(
-      (p) =>
-        (p.name || '').toLowerCase().includes(q) ||
-        (p.fmsi_number || '').toLowerCase().includes(q) ||
-        (p.position || '').toLowerCase().includes(q) ||
-        (p.brand || '').toLowerCase().includes(q) ||
-        (p.application || '').toLowerCase().includes(q) ||
-        (p.product_type || '').toLowerCase().includes(q) ||
-        (p.sku || '').toLowerCase().includes(q)
-    )
-  }, [list, searchFilter])
-
-  const {
-    paginatedItems,
-    currentPage,
-    totalPages,
-    pageSize,
-    setPage,
-    setPageSize,
-  } = usePagination(filteredList, 10)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -388,9 +379,9 @@ export default function ProductsPage() {
         {loading ? (
           <div className="empty">Loading…</div>
         ) : list.length === 0 ? (
-          <div className="empty">No products yet. Use “Add product” to create one.</div>
-        ) : filteredList.length === 0 ? (
-          <div className="empty">No products match your search.</div>
+          <div className="empty">
+            {searchFilter.trim() ? 'No products match your search.' : 'No products yet. Use “Add product” to create one.'}
+          </div>
         ) : (
           <>
           <table className="table">
@@ -413,7 +404,7 @@ export default function ProductsPage() {
               </tr>
             </thead>
             <tbody>
-              {paginatedItems.map((r) => (
+              {list.map((r) => (
                 <tr key={r.id}>
                   <td title={r.name || ''}>
                     {r.sku || r.part_number || (r.name && r.name.length > 40 ? r.name.slice(0, 40) + '…' : r.name) || '—'}
@@ -448,13 +439,13 @@ export default function ProductsPage() {
             </tbody>
           </table>
           <Pagination
-            currentPage={currentPage}
+            currentPage={page}
             totalPages={totalPages}
-            totalItems={filteredList.length}
-            pageSize={pageSize}
+            totalItems={count}
+            pageSize={effectivePageSize}
             onPageChange={setPage}
             onPageSizeChange={setPageSize}
-            pageSizeOptions={[10, 20, 50]}
+            pageSizeOptions={PRODUCT_PAGE_SIZE_OPTIONS}
           />
           </>
         )}

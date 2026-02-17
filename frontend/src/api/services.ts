@@ -101,7 +101,14 @@ export const sites = {
 }
 
 export const products = {
-  list: (page?: number) => api(page ? `products/?page=${page}` : 'products/'),
+  list: (page?: number, params?: { page_size?: number; q?: string }) => {
+    const search = new URLSearchParams()
+    if (page != null && page >= 1) search.set('page', String(page))
+    if (params?.page_size != null) search.set('page_size', String(params.page_size))
+    if (params?.q?.trim()) search.set('q', params.q.trim())
+    const query = search.toString()
+    return api(query ? `products/?${query}` : 'products/')
+  },
   search: (q: string, limit = 15, { vehicle = '', siteId = '' }: { vehicle?: string; siteId?: string } = {}) => {
     const params = new URLSearchParams({ q: q || '', limit: String(limit) })
     if (vehicle) params.set('vehicle', vehicle)

@@ -264,6 +264,23 @@ class ProductListCreateView(generics.ListCreateAPIView):
     serializer_class = ProductSerializer
     permission_classes = [IsSuperUserOrReadOnly]  # Only superusers should access this
 
+    def get_queryset(self):
+        qs = super().get_queryset()
+        q = (self.request.query_params.get("q") or "").strip()
+        if q:
+            qs = qs.filter(
+                Q(name__icontains=q)
+                | Q(fmsi_number__icontains=q)
+                | Q(position__icontains=q)
+                | Q(brand__icontains=q)
+                | Q(application__icontains=q)
+                | Q(product_type__icontains=q)
+                | Q(sku__icontains=q)
+                | Q(part_number__icontains=q)
+            )
+        return qs
+
+
 class ProductDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
